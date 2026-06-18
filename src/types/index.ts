@@ -20,6 +20,16 @@ export interface Inspiration {
   updatedAt: number;
 }
 
+export interface InspirationDraft {
+  id: string;
+  title: string;
+  description: string;
+  influences: Influence[];
+  relatedEndingIds: string[];
+  tags: string[];
+  updatedAt: number;
+}
+
 export interface CausalityQuestion {
   id: string;
   question: string;
@@ -47,6 +57,8 @@ export interface Ending {
 
 export interface GameState {
   inspirations: Inspiration[];
+  drafts: InspirationDraft[];
+  activeDraftId: string | null;
   endings: Ending[];
   selectedEndingId: string | null;
   causalityQuestions: CausalityQuestion[];

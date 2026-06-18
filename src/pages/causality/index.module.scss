@@ -390,6 +390,278 @@
   line-height: 1.4;
 }
 
+// ===== 模式切换 =====
+
+.viewModeTabs {
+  display: flex;
+  background: $color-bg-card;
+  border-radius: $radius-button;
+  padding: 6rpx;
+  margin-bottom: $spacing-lg;
+  border: 1rpx solid $color-border;
+}
+
+.viewModeTab {
+  flex: 1;
+  padding: $spacing-md 0;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  position: relative;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.active {
+    background: linear-gradient(135deg, rgba(155, 89, 182, 0.3), rgba(52, 152, 219, 0.25));
+  }
+}
+
+.viewModeTabIcon {
+  font-size: 28rpx;
+}
+
+.viewModeTabText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  font-weight: $font-weight-medium;
+}
+
+.active .viewModeTabText {
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.viewModeTabBadge {
+  min-width: 36rpx;
+  height: 36rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, #E74C3C, #C0392B);
+  padding: 0 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewModeTabBadgeGreen {
+  min-width: 36rpx;
+  height: 36rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, #2ECC71, #27AE60);
+  padding: 0 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewModeTabBadgeText {
+  font-size: 20rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+}
+
+// ===== 复盘视图 =====
+
+.reviewArea {
+  margin-top: $spacing-md;
+}
+
+.reviewHeaderCard {
+  padding: $spacing-lg;
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.12), rgba(52, 152, 219, 0.1));
+  border: 1rpx solid rgba(155, 89, 182, 0.25);
+  border-radius: $radius-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.reviewHeaderTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-primary-light;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.reviewHeaderMeta {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.reviewHeaderHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: 1.6;
+  display: block;
+}
+
+.reviewSection {
+  margin-bottom: $spacing-xl;
+}
+
+.reviewSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+}
+
+.reviewSectionIcon {
+  font-size: 36rpx;
+}
+
+.reviewSectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  display: block;
+  line-height: 1.3;
+}
+
+.reviewSectionCount {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+  display: block;
+}
+
+.qaCard {
+  display: flex;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-border;
+  margin-bottom: $spacing-sm;
+}
+
+.qaCardIndex {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.qaCardIndexText {
+  font-size: 24rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+}
+
+.qaCardBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.qaQuestionRow {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.qaQuestionLabel {
+  flex-shrink: 0;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-round;
+  background: rgba(52, 152, 219, 0.18);
+  color: #5DADE2;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.qaQuestionText {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+  line-height: 1.6;
+  flex: 1;
+}
+
+.qaAnswerRow {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.qaAnswerLabel {
+  flex-shrink: 0;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-round;
+  background: rgba(46, 204, 113, 0.18);
+  color: #58D68D;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.qaAnswerText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.7;
+  flex: 1;
+}
+
+.reviewGapCard {
+  padding: $spacing-lg;
+  background: rgba(243, 156, 18, 0.08);
+  border: 1rpx solid rgba(243, 156, 18, 0.25);
+  border-radius: $radius-lg;
+}
+
+.reviewGapTitle {
+  font-size: $font-size-md;
+  color: #F5B041;
+  font-weight: $font-weight-semibold;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.reviewGapText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.6;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+.reviewGapBtn {
+  padding: $spacing-sm $spacing-md;
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.2), rgba(52, 152, 219, 0.15));
+  border: 1rpx solid rgba(155, 89, 182, 0.35);
+  border-radius: $radius-md;
+  display: inline-flex;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.reviewGapBtnText {
+  font-size: $font-size-sm;
+  color: $color-primary-light;
+  font-weight: $font-weight-semibold;
+}
+
 .refreshBtn {
   display: inline-flex;
   align-items: center;

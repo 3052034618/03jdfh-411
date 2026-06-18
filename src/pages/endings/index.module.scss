@@ -977,3 +977,335 @@
     box-shadow: none;
   }
 }
+
+// ===== 视图模式切换 =====
+
+.viewModeTabs {
+  display: flex;
+  background: $color-bg-card;
+  border-radius: $radius-button;
+  padding: 6rpx;
+  margin-bottom: $spacing-lg;
+  border: 1rpx solid $color-border;
+}
+
+.viewModeTab {
+  flex: 1;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-button;
+  transition: all $transition-base;
+  gap: $spacing-sm;
+  position: relative;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.active {
+    background: linear-gradient(135deg, $color-primary-light, $color-primary);
+    box-shadow: 0 4rpx 12rpx rgba(155, 89, 182, 0.35);
+  }
+}
+
+.viewModeTabIcon {
+  font-size: 28rpx;
+}
+
+.viewModeTabText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  font-weight: $font-weight-medium;
+}
+
+.active .viewModeTabText {
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+}
+
+.viewModeTabBadgeBlue {
+  position: absolute;
+  right: 16rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 32rpx;
+  height: 32rpx;
+  border-radius: 16rpx;
+  background: rgba(46, 204, 113, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8rpx;
+}
+
+.viewModeTabBadgeText {
+  font-size: 20rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+}
+
+// ===== 路径视图 =====
+
+.graphArea {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.graphLegendBar {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  border: 1rpx solid $color-border;
+  padding: $spacing-lg;
+}
+
+.graphLegendCard {
+  margin-bottom: $spacing-md;
+}
+
+.graphLegendTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.graphLegendHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: 1.6;
+}
+
+.graphLegendRow {
+  display: flex;
+  gap: $spacing-xl;
+  padding-top: $spacing-sm;
+  border-top: 1rpx dashed $color-border;
+}
+
+.graphLegendItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.graphLegendDot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: $radius-round;
+}
+
+.graphLegendLabel {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.graphEmptyWrap {
+  padding-top: 40rpx;
+}
+
+.graphRowCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  border: 1rpx solid $color-border;
+  padding: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.graphInspirationNode {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.14), rgba(155, 89, 182, 0.04));
+  border: 1rpx solid rgba(155, 89, 182, 0.25);
+  border-radius: $radius-md;
+}
+
+.graphInspirationDot {
+  color: $color-primary;
+  font-size: 20rpx;
+  margin-top: 6rpx;
+  flex-shrink: 0;
+}
+
+.graphInspirationTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: 6rpx;
+  line-height: 1.4;
+}
+
+.graphInspirationDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: 1.5;
+  @include text-ellipsis-multi(2);
+}
+
+.graphEdges {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding-left: 32rpx;
+  position: relative;
+}
+
+.edgeConnector {
+  position: relative;
+  height: 40rpx;
+  padding-left: 20rpx;
+}
+
+.edgeLine {
+  position: absolute;
+  top: 0;
+  left: 12rpx;
+  width: 2rpx;
+  height: 40rpx;
+  background: linear-gradient(180deg, rgba(155, 89, 182, 0.45), rgba(155, 89, 182, 0.08));
+}
+
+.edgeArrow {
+  position: absolute;
+  left: 4rpx;
+  bottom: 0;
+  color: $color-primary-light;
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.graphEndingNode {
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 2rpx solid;
+  transition: all $transition-fast;
+
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.graphEndingMain {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.graphEndingBadge {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-round;
+  flex-shrink: 0;
+  font-weight: $font-weight-semibold;
+}
+
+.graphEndingTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  line-height: 1.4;
+}
+
+.graphEndingMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+}
+
+.graphEndingDifficulty {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.graphEndingCausalityBtn {
+  padding: 8rpx 20rpx;
+  border-radius: $radius-button;
+  background: rgba(44, 62, 80, 0.6);
+  border: 1rpx solid $color-border;
+}
+
+.graphEndingCausalityText {
+  font-size: 22rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+}
+
+// ===== orphan 未连通部分 =====
+
+.orphanSection {
+  margin-top: $spacing-md;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  border: 1rpx solid $color-border;
+  padding: $spacing-lg;
+  border-style: dashed;
+}
+
+.orphanHeader {
+  margin-bottom: $spacing-md;
+}
+
+.orphanHeaderTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.orphanHeaderHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.orphanBlock {
+  margin-top: $spacing-md;
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.orphanBlockLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  font-weight: $font-weight-semibold;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.orphanChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.orphanChip {
+  padding: 12rpx 24rpx;
+  border-radius: $radius-round;
+  background: $color-bg-input;
+  border: 1rpx solid $color-border;
+  max-width: 300rpx;
+
+  &.endingChip {
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+}
+
+.orphanChipText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: 1.4;
+}

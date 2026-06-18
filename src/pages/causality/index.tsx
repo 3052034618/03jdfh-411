@@ -1,15 +1,16 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import classnames from 'classnames';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import { useGameStore } from '@/store/gameStore';
 import QuestionBubble from '@/components/QuestionBubble';
-import TagChip from '@/components/TagChip';
 import EmptyState from '@/components/EmptyState';
 import type { Ending, EndingType } from '@/types';
-import { ENDING_TYPE_LABELS, QUESTION_CATEGORY_LABELS, QUESTION_CATEGORY_ICONS } from '@/types';
+import { ENDING_TYPE_LABELS } from '@/types';
 import { getEndingTypeColor, getDifficultyLabel } from '@/utils/aiPrompt';
+
+type ViewMode = 'interview' | 'review';
 
 const CausalityPage: React.FC = () => {
   const {
@@ -20,8 +21,11 @@ const CausalityPage: React.FC = () => {
     regenerateQuestions,
     answerQuestion,
     getEndingRelatedInspirations,
-    getCategoryProgress
+    getCategoryProgress,
+    getEndingReview
   } = useGameStore();
+
+  const [viewMode, setViewMode] = useState<ViewMode>('interview');
 
   const selectedEnding = useMemo(
     () => endings.find((e) => e.id === selectedEndingId) || null,
@@ -45,6 +49,11 @@ const CausalityPage: React.FC = () => {
     return getCategoryProgress(selectedEndingId);
   }, [selectedEndingId, getCategoryProgress]);
 
+  const reviewData = useMemo(() => {
+    if (!selectedEndingId) return null;
+    return getEndingReview(selectedEndingId);
+  }, [selectedEndingId, getEndingReview]);
+
   useEffect(() => {
     if (endings.length > 0 && !selectedEndingId) {
       selectEnding(endings[0].id);
@@ -53,7 +62,6 @@ const CausalityPage: React.FC = () => {
 
   const handleSelectEnding = (ending: Ending) => {
     selectEnding(ending.id);
-    console.log('[CausalityPage] 选中结局:', ending.title);
   };
 
   const handleRefresh = () => {
@@ -259,7 +267,39 @@ const CausalityPage: React.FC = () => {
             </View>
           </View>
 
-          {/* 分类进度 */}
+          {/* 模式切换 Tab */}
+          <View className={styles.viewModeTabs}>
+            <View
+              className={classnames(styles.viewModeTab, viewMode === 'interview' && styles.active)}
+              onClick={() => setViewMode('interview')}
+            >
+              <Text className={styles.viewModeTabIcon}>❓</Text>
+              <Text className={styles.viewModeTabText}>追问模式</Text>
+              {progress.total - progress.answered > 0 && (
+                <View className={styles.viewModeTabBadge}>
+                  <Text className={styles.viewModeTabBadgeText}>
+                    {progress.total - progress.answered}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View
+              className={classnames(styles.viewModeTab, viewMode === 'review' && styles.active)}
+              onClick={() => setViewMode('review')}
+            >
+              <Text className={styles.viewModeTabIcon}>📝</Text>
+              <Text className={styles.viewModeTabText}>复盘视图</Text>
+              {reviewData && reviewData.answeredCount > 0 && (
+                <View className={styles.viewModeTabBadgeGreen}>
+                  <Text className={styles.viewModeTabBadgeText}>
+                    {reviewData.answeredCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* 分类进度（两种模式通用） */}
           {categoryList.length > 0 && (
             <View className={styles.categorySection}>
               <Text className={styles.categorySectionTitle}>📂 各环节补充情况</Text>
@@ -267,15 +307,29 @@ const CausalityPage: React.FC = () => {
                 {categoryList.map(([category, info]) => {
                   const percent = info.total > 0 ? Math.round((info.answered / info.total) * 100) : 0;
                   const c = getCategoryColor(category);
+                  const labelMap: Record<string, string> = {
+                    timing: '时间节点',
+                    knowledge: '信息获取',
+                    mechanism: '触发机制',
+                    consequence: '连锁后果',
+                    motivation: '角色动机'
+                  };
+                  const iconMap: Record<string, string> = {
+                    timing: '⏰',
+                    knowledge: '💡',
+                    mechanism: '⚙️',
+                    consequence: '🔗',
+                    motivation: '🧠'
+                  };
                   return (
                     <View key={category} className={styles.categoryItem}>
                       <View className={styles.categoryHeader}>
                         <Text className={styles.categoryIcon}>
-                          {QUESTION_CATEGORY_ICONS[category as keyof typeof QUESTION_CATEGORY_ICONS]}
+                          {iconMap[category]}
                         </Text>
                         <View style={{ flex: 1 }}>
                           <Text className={styles.categoryName} style={{ color: c.text }}>
-                            {QUESTION_CATEGORY_LABELS[category as keyof typeof QUESTION_CATEGORY_LABELS]}
+                            {labelMap[category]}
                           </Text>
                           <Text className={styles.categoryProgressText}>
                             {info.answered}/{info.total} · {percent}%
@@ -290,7 +344,7 @@ const CausalityPage: React.FC = () => {
                       </View>
                       {info.answered < info.total && (
                         <Text className={styles.categoryMissing}>
-                          还差 {info.total - info.answered} 个{QUESTION_CATEGORY_LABELS[category as keyof typeof QUESTION_CATEGORY_LABELS]}问题没补
+                          还差 {info.total - info.answered} 个{labelMap[category]}问题没补
                         </Text>
                       )}
                     </View>
@@ -300,31 +354,124 @@ const CausalityPage: React.FC = () => {
             </View>
           )}
 
-          <View className={styles.refreshBtn} onClick={handleRefresh}>
-            <Text className={styles.refreshBtnText}>🔄 换一组问题</Text>
-          </View>
-
-          {/* 问题列表 */}
-          <View className={styles.questionsArea}>
-            {causalityQuestions.length === 0 ? (
-              <View className={styles.emptyQuestions}>
-                <EmptyState
-                  icon="🤔"
-                  title="暂时没有问题"
-                  description="关联更多灵感节点后，可以生成更有针对性的因果检查问题"
-                />
+          {/* =============== 追问模式 =============== */}
+          {viewMode === 'interview' && (
+            <>
+              <View className={styles.refreshBtn} onClick={handleRefresh}>
+                <Text className={styles.refreshBtnText}>🔄 换一组问题</Text>
               </View>
-            ) : (
-              causalityQuestions.map((q, idx) => (
-                <QuestionBubble
-                  key={q.id}
-                  data={q}
-                  index={idx}
-                  onAnswer={(ans) => handleAnswer(q.id, ans)}
-                />
-              ))
-            )}
-          </View>
+
+              <View className={styles.questionsArea}>
+                {causalityQuestions.length === 0 ? (
+                  <View className={styles.emptyQuestions}>
+                    <EmptyState
+                      icon="🤔"
+                      title="暂时没有问题"
+                      description="关联更多灵感节点后，可以生成更有针对性的因果检查问题"
+                    />
+                  </View>
+                ) : (
+                  causalityQuestions.map((q, idx) => (
+                    <QuestionBubble
+                      key={q.id}
+                      data={q}
+                      index={idx}
+                      onAnswer={(ans) => handleAnswer(q.id, ans)}
+                    />
+                  ))
+                )}
+              </View>
+            </>
+          )}
+
+          {/* =============== 复盘视图 =============== */}
+          {viewMode === 'review' && reviewData && (
+            <View className={styles.reviewArea}>
+              {reviewData.answeredCount === 0 ? (
+                <View className={styles.emptyQuestions}>
+                  <EmptyState
+                    icon="✏️"
+                    title="还没有补充任何内容"
+                    description="先切到「追问模式」回答几个问题，再来这里看整理好的复盘吧"
+                    actionLabel="❓ 去回答问题"
+                    onAction={() => setViewMode('interview')}
+                  />
+                </View>
+              ) : (
+                <>
+                  <View className={styles.reviewHeaderCard}>
+                    <Text className={styles.reviewHeaderTitle}>📑 因果链复盘笔记</Text>
+                    <Text className={styles.reviewHeaderMeta}>
+                      为【{selectedEnding.title}】已补充 {reviewData.answeredCount}/{reviewData.totalCount} 条内容
+                    </Text>
+                    <Text className={styles.reviewHeaderHint}>
+                      💡 以下按「时间→信息→机制→后果→动机」五个环节整理，便于你把整段因果链串起来阅读
+                    </Text>
+                  </View>
+
+                  {reviewData.sections.map((section) => (
+                    section.questions.length > 0 && (
+                      <View key={section.category} className={styles.reviewSection}>
+                        <View
+                          className={styles.reviewSectionHeader}
+                          style={{
+                            background: getCategoryColor(section.category).bg,
+                            borderLeft: `6rpx solid ${getCategoryColor(section.category).text}`
+                          }}
+                        >
+                          <Text className={styles.reviewSectionIcon}>{section.icon}</Text>
+                          <View style={{ flex: 1 }}>
+                            <Text
+                              className={styles.reviewSectionTitle}
+                              style={{ color: getCategoryColor(section.category).text }}
+                            >
+                              {section.label}
+                            </Text>
+                            <Text className={styles.reviewSectionCount}>
+                              已补充 {section.questions.length} 条
+                            </Text>
+                          </View>
+                        </View>
+
+                        {section.questions.map((qa, idx) => (
+                          <View key={qa.questionId} className={styles.qaCard}>
+                            <View className={styles.qaCardIndex}>
+                              <Text className={styles.qaCardIndexText}>{idx + 1}</Text>
+                            </View>
+                            <View className={styles.qaCardBody}>
+                              <View className={styles.qaQuestionRow}>
+                                <Text className={styles.qaQuestionLabel}>问</Text>
+                                <Text className={styles.qaQuestionText}>{qa.question}</Text>
+                              </View>
+                              <View className={styles.qaAnswerRow}>
+                                <Text className={styles.qaAnswerLabel}>答</Text>
+                                <Text className={styles.qaAnswerText}>{qa.answer}</Text>
+                              </View>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )
+                  ))}
+
+                  {reviewData.answeredCount < reviewData.totalCount && (
+                    <View className={styles.reviewGapCard}>
+                      <Text className={styles.reviewGapTitle}>🕳️ 还有环节没补完</Text>
+                      <Text className={styles.reviewGapText}>
+                        还差 {reviewData.totalCount - reviewData.answeredCount} 条问题没回答。切回「追问模式」继续补完，整条因果链会更清晰。
+                      </Text>
+                      <View
+                        className={styles.reviewGapBtn}
+                        onClick={() => setViewMode('interview')}
+                      >
+                        <Text className={styles.reviewGapBtnText}>❓ 切换到追问模式</Text>
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          )}
         </>
       ) : (
         <View style={{ marginTop: 120 }}>

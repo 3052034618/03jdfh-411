@@ -7,12 +7,13 @@ import { useGameStore } from '@/store/gameStore';
 import EndingCard from '@/components/EndingCard';
 import TagChip from '@/components/TagChip';
 import EmptyState from '@/components/EmptyState';
-import type { Ending, EndingType } from '@/types';
+import type { Ending, EndingType, Inspiration } from '@/types';
 import { ENDING_TYPE_LABELS } from '@/types';
 import { getEndingTypeColor, getDifficultyLabel } from '@/utils/aiPrompt';
 
 type TabType = 'all' | EndingType;
 type SortType = 'asc' | 'desc';
+type EndingsViewMode = 'list' | 'graph';
 
 interface SimilarGroup {
   groupId: string;
@@ -32,6 +33,10 @@ interface EndingFormState {
   similarityGroup: string;
   unlocked: boolean;
   relatedInspirationIds: string[];
+}
+
+interface GraphRow {
+  inspiration: Inspiration & { endingEdges: { endingId: string; type: EndingType }[] };
 }
 
 const emptyForm: EndingFormState = {
@@ -57,9 +62,12 @@ const EndingsPage: React.FC = () => {
     updateEnding,
     toggleEndingUnlocked,
     getSimilarEndings,
-    getCostUnclearEndings
+    getCostUnclearEndings,
+    getGraphData,
+    selectEnding
   } = useGameStore();
 
+  const [viewMode, setViewMode] = useState<EndingsViewMode>('list');
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [sortType, setSortType] = useState<SortType>('asc');
   const [selectedEnding, setSelectedEnding] = useState<Ending | null>(null);
@@ -75,6 +83,23 @@ const EndingsPage: React.FC = () => {
     hidden: endings.filter((e) => e.type === 'hidden').length,
     true: endings.filter((e) => e.type === 'true').length
   }), [endings]);
+
+  const graphData = useMemo(() => getGraphData(), [getGraphData]);
+
+  const graphRows = useMemo<GraphRow[]>(() => {
+    const rows: GraphRow[] = graphData.inspirations
+      .filter((ins) => ins.endingEdges.length > 0)
+      .map((ins) => ({ inspiration: ins }));
+    return rows;
+  }, [graphData]);
+
+  const orphanInspirations = useMemo(() => {
+    return graphData.inspirations.filter((i) => i.endingEdges.length === 0);
+  }, [graphData]);
+
+  const orphanEndings = useMemo(() => {
+    return graphData.endings.filter((e) => e.relatedInspirationIds.length === 0);
+  }, [graphData]);
 
   const similarGroups = useMemo<SimilarGroup[]>(() => {
     const groups: Record<string, Ending[]> = {};
@@ -111,7 +136,24 @@ const EndingsPage: React.FC = () => {
 
   const handleCardClick = (ending: Ending) => {
     setSelectedEnding(ending);
-    console.log('[EndingsPage] 查看结局详情:', ending.title);
+  };
+
+  const handleInspirationCardClick = (insId: string) => {
+    Taro.showToast({ title: '请在「灵感速记」页管理该灵感', icon: 'none' });
+  };
+
+  const handleEndingNodeClick = (endingId: string) => {
+    const ending = endings.find((e) => e.id === endingId);
+    if (ending) {
+      setSelectedEnding(ending);
+    }
+  };
+
+  const handleGotoCausalityFromGraph = (endingId: string) => {
+    Taro.switchTab({ url: '/pages/causality/index' });
+    setTimeout(() => {
+      useGameStore.getState().selectEnding(endingId);
+    }, 300);
   };
 
   const closeModal = () => {
@@ -170,10 +212,14 @@ const EndingsPage: React.FC = () => {
       Taro.showToast({ title: '请填写结局代价', icon: 'none' });
       return;
     }
-    updateEnding(selectedEnding.id, {
+    const result = updateEnding(selectedEnding.id, {
       cost: costEditorValue.trim(),
       costUnclear: false
     });
+    if (!result.ok) {
+      Taro.showToast({ title: result.reason || '保存失败', icon: 'none' });
+      return;
+    }
     Taro.showToast({ title: '代价已补充 ✅', icon: 'none' });
     setShowCostEditor(false);
     setSelectedEnding((prev) =>
@@ -224,8 +270,6 @@ const EndingsPage: React.FC = () => {
       Taro.showToast({ title: '至少添加一个达成条件', icon: 'none' });
       return;
     }
-    const hasClearCost = !!form.cost.trim() || !form.costUnclear;
-
     const payload = {
       title: form.title.trim(),
       type: form.type,
@@ -240,16 +284,29 @@ const EndingsPage: React.FC = () => {
       unlocked: form.unlocked
     };
 
+    let result: { ok: boolean; reason?: string };
     if (editingId) {
-      updateEnding(editingId, payload);
-      Taro.showToast({ title: '结局已更新', icon: 'success' });
+      result = updateEnding(editingId, payload);
     } else {
-      addEnding(payload);
-      Taro.showToast({ title: '新结局已收录 🎴', icon: 'none' });
+      result = addEnding(payload);
     }
+
+    if (!result.ok) {
+      Taro.showModal({
+        title: '保存失败',
+        content: result.reason || '请检查填写内容',
+        showCancel: false,
+        confirmText: '好的'
+      });
+      return;
+    }
+
+    Taro.showToast({
+      title: editingId ? '结局已更新' : '新结局已收录 🎴',
+      icon: editingId ? 'success' : 'none'
+    });
     setShowEditor(false);
     setEditingId(null);
-    console.log('[EndingsPage] 保存结局:', form.title);
   };
 
   const getTabBg = (tab: TabType) => {
@@ -278,177 +335,376 @@ const EndingsPage: React.FC = () => {
         </View>
       </View>
 
-      {/* Tab 切换 */}
-      <View className={styles.tabBar}>
-        {([
-          { key: 'all' as const, label: '全部' },
-          { key: 'bad' as const, label: '坏结局' },
-          { key: 'hidden' as const, label: '隐藏结局' },
-          { key: 'true' as const, label: '真结局' }
-        ]).map((tab) => (
-          <View
-            key={tab.key}
-            className={classnames(styles.tabItem, activeTab === tab.key && styles.active)}
-            style={activeTab === tab.key ? getTabBg(tab.key) : {}}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            <Text className={styles.tabText}>
-              {tab.label}
-              <Text className={styles.tabCount}>{tabCounts[tab.key]}</Text>
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      {/* 智能提醒横幅 */}
-      {activeTab === 'all' && (similarGroups.length > 0 || costUnclearEndings.length > 0) && (
-        <>
-          {similarGroups.length > 0 && (
-            <View className={classnames(styles.alertBanner, 'warning')}>
-              <View className={styles.alertHeader}>
-                <Text className={styles.alertIcon}>⚠️</Text>
-                <Text className={styles.alertTitle}>
-                  {similarGroups.length} 组结局条件相似
-                </Text>
-              </View>
-              <View className={styles.alertList}>
-                {similarGroups.map((g) => (
-                  <View key={g.groupId} className={styles.alertItem}>
-                    <Text
-                      className={styles.alertBadge}
-                      style={{
-                        background: 'rgba(243, 156, 18, 0.2)',
-                        color: '#F5B041'
-                      }}
-                    >
-                      相似组
-                    </Text>
-                    <Text className={styles.alertItemText}>
-                      {g.endings.map((e) => `【${e.title}】`).join(' 与 ')}
-                    </Text>
-                    <Text
-                      className={styles.alertAction}
-                      onClick={() => handleCardClick(g.endings[0])}
-                    >
-                      去区分 →
-                    </Text>
-                  </View>
-                ))}
-              </View>
+      {/* 视图模式切换 */}
+      <View className={styles.viewModeTabs}>
+        <View
+          className={classnames(styles.viewModeTab, viewMode === 'list' && styles.active)}
+          onClick={() => setViewMode('list')}
+        >
+          <Text className={styles.viewModeTabIcon}>🃏</Text>
+          <Text className={styles.viewModeTabText}>卡册视图</Text>
+        </View>
+        <View
+          className={classnames(styles.viewModeTab, viewMode === 'graph' && styles.active)}
+          onClick={() => setViewMode('graph')}
+        >
+          <Text className={styles.viewModeTabIcon}>🗺️</Text>
+          <Text className={styles.viewModeTabText}>路径视图</Text>
+          {graphRows.length > 0 && (
+            <View className={styles.viewModeTabBadgeBlue}>
+              <Text className={styles.viewModeTabBadgeText}>{graphRows.length}</Text>
             </View>
           )}
-
-          {costUnclearEndings.length > 0 && (
-            <View className={classnames(styles.alertBanner, 'danger')}>
-              <View className={styles.alertHeader}>
-                <Text className={styles.alertIcon}>❓</Text>
-                <Text className={styles.alertTitle}>
-                  {costUnclearEndings.length} 个结局代价尚不明确
-                </Text>
-              </View>
-              <View className={styles.alertList}>
-                {costUnclearEndings.slice(0, 3).map((e) => (
-                  <View
-                    key={e.id}
-                    className={styles.alertItem}
-                    onClick={() => openCostQuickEdit(e)}
-                  >
-                    <Text
-                      className={styles.alertBadge}
-                      style={{
-                        background: getEndingTypeColor(e.type).bg,
-                        color: getEndingTypeColor(e.type).text
-                      }}
-                    >
-                      {ENDING_TYPE_LABELS[e.type]}
-                    </Text>
-                    <Text className={styles.alertItemText}>【{e.title}】代价是什么？</Text>
-                    <Text className={styles.alertAction}>✏️ 去补充</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-        </>
-      )}
-
-      {/* 排序栏 */}
-      <View className={styles.sortBar}>
-        <Text className={styles.sortLabel}>
-          共 {filteredEndings.length} 个结局
-        </Text>
-        <View className={styles.sortOptions}>
-          <View
-            className={classnames(styles.sortOption, sortType === 'asc' && styles.active)}
-            onClick={() => setSortType('asc')}
-          >
-            <Text className={styles.sortOptionText}>难度 ↑</Text>
-          </View>
-          <View
-            className={classnames(styles.sortOption, sortType === 'desc' && styles.active)}
-            onClick={() => setSortType('desc')}
-          >
-            <Text className={styles.sortOptionText}>难度 ↓</Text>
-          </View>
         </View>
       </View>
 
-      {/* 结局列表 */}
-      <View className={styles.endingsList}>
-        {filteredEndings.length === 0 ? (
-          <View style={{ marginTop: 80 }}>
-            <EmptyState
-              icon="🎴"
-              title="该分类暂无结局"
-              description="点击右上角 + 按钮，添加你的第一个结局"
-              actionLabel="✨ 添加结局"
-              onAction={openCreateEnding}
-            />
-          </View>
-        ) : activeTab === 'all' && groupedByType ? (
-          groupedByType.map((group) => (
-            group.list.length > 0 && (
-              <View key={group.type}>
-                <View className={classnames(styles.sectionHeader, group.type)}>
-                  <Text className={styles.sectionTitle}>
-                    {ENDING_TYPE_LABELS[group.type]}
-                  </Text>
-                  <Text className={styles.sectionCount}>{group.list.length} 个</Text>
-                </View>
-                {group.list.map((ending) => {
-                  const similar = getSimilarEndings(ending.id);
-                  const hasWarning = similar.length > 0 || ending.costUnclear;
-                  return (
-                    <EndingCard
-                      key={ending.id}
-                      data={ending}
-                      showWarning={hasWarning}
-                      warningType={ending.costUnclear ? 'cost' : 'similar'}
-                      onClick={() => handleCardClick(ending)}
-                    />
-                  );
-                })}
+      {/* =============== 卡册视图 =============== */}
+      {viewMode === 'list' && (
+        <>
+          <View className={styles.tabBar}>
+            {([
+              { key: 'all' as const, label: '全部' },
+              { key: 'bad' as const, label: '坏结局' },
+              { key: 'hidden' as const, label: '隐藏结局' },
+              { key: 'true' as const, label: '真结局' }
+            ]).map((tab) => (
+              <View
+                key={tab.key}
+                className={classnames(styles.tabItem, activeTab === tab.key && styles.active)}
+                style={activeTab === tab.key ? getTabBg(tab.key) : {}}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                <Text className={styles.tabText}>
+                  {tab.label}
+                  <Text className={styles.tabCount}>{tabCounts[tab.key]}</Text>
+                </Text>
               </View>
-            )
-          ))
-        ) : (
-          filteredEndings.map((ending) => {
-            const similar = getSimilarEndings(ending.id);
-            const hasWarning = similar.length > 0 || ending.costUnclear;
-            return (
-              <EndingCard
-                key={ending.id}
-                data={ending}
-                showWarning={hasWarning}
-                warningType={ending.costUnclear ? 'cost' : 'similar'}
-                onClick={() => handleCardClick(ending)}
-              />
-            );
-          })
-        )}
-      </View>
+            ))}
+          </View>
 
-      {/* 结局详情弹窗 */}
+          {/* 智能提醒横幅 */}
+          {activeTab === 'all' && (similarGroups.length > 0 || costUnclearEndings.length > 0) && (
+            <>
+              {similarGroups.length > 0 && (
+                <View className={classnames(styles.alertBanner, 'warning')}>
+                  <View className={styles.alertHeader}>
+                    <Text className={styles.alertIcon}>⚠️</Text>
+                    <Text className={styles.alertTitle}>
+                      {similarGroups.length} 组结局条件相似
+                    </Text>
+                  </View>
+                  <View className={styles.alertList}>
+                    {similarGroups.map((g) => (
+                      <View key={g.groupId} className={styles.alertItem}>
+                        <Text
+                          className={styles.alertBadge}
+                          style={{
+                            background: 'rgba(243, 156, 18, 0.2)',
+                            color: '#F5B041'
+                          }}
+                        >
+                          相似组
+                        </Text>
+                        <Text className={styles.alertItemText}>
+                          {g.endings.map((e) => `【${e.title}】`).join(' 与 ')}
+                        </Text>
+                        <Text
+                          className={styles.alertAction}
+                          onClick={() => handleCardClick(g.endings[0])}
+                        >
+                          去区分 →
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {costUnclearEndings.length > 0 && (
+                <View className={classnames(styles.alertBanner, 'danger')}>
+                  <View className={styles.alertHeader}>
+                    <Text className={styles.alertIcon}>❓</Text>
+                    <Text className={styles.alertTitle}>
+                      {costUnclearEndings.length} 个结局代价尚不明确
+                    </Text>
+                  </View>
+                  <View className={styles.alertList}>
+                    {costUnclearEndings.slice(0, 3).map((e) => (
+                      <View
+                        key={e.id}
+                        className={styles.alertItem}
+                        onClick={() => openCostQuickEdit(e)}
+                      >
+                        <Text
+                          className={styles.alertBadge}
+                          style={{
+                            background: getEndingTypeColor(e.type).bg,
+                            color: getEndingTypeColor(e.type).text
+                          }}
+                        >
+                          {ENDING_TYPE_LABELS[e.type]}
+                        </Text>
+                        <Text className={styles.alertItemText}>【{e.title}】代价是什么？</Text>
+                        <Text className={styles.alertAction}>✏️ 去补充</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </>
+          )}
+
+          <View className={styles.sortBar}>
+            <Text className={styles.sortLabel}>
+              共 {filteredEndings.length} 个结局
+            </Text>
+            <View className={styles.sortOptions}>
+              <View
+                className={classnames(styles.sortOption, sortType === 'asc' && styles.active)}
+                onClick={() => setSortType('asc')}
+              >
+                <Text className={styles.sortOptionText}>难度 ↑</Text>
+              </View>
+              <View
+                className={classnames(styles.sortOption, sortType === 'desc' && styles.active)}
+                onClick={() => setSortType('desc')}
+              >
+                <Text className={styles.sortOptionText}>难度 ↓</Text>
+              </View>
+            </View>
+          </View>
+
+          <View className={styles.endingsList}>
+            {filteredEndings.length === 0 ? (
+              <View style={{ marginTop: 80 }}>
+                <EmptyState
+                  icon="🎴"
+                  title="该分类暂无结局"
+                  description="点击右上角 + 按钮，添加你的第一个结局"
+                  actionLabel="✨ 添加结局"
+                  onAction={openCreateEnding}
+                />
+              </View>
+            ) : activeTab === 'all' && groupedByType ? (
+              groupedByType.map((group) => (
+                group.list.length > 0 && (
+                  <View key={group.type}>
+                    <View className={classnames(styles.sectionHeader, group.type)}>
+                      <Text className={styles.sectionTitle}>
+                        {ENDING_TYPE_LABELS[group.type]}
+                      </Text>
+                      <Text className={styles.sectionCount}>{group.list.length} 个</Text>
+                    </View>
+                    {group.list.map((ending) => {
+                      const similar = getSimilarEndings(ending.id);
+                      const hasWarning = similar.length > 0 || ending.costUnclear;
+                      return (
+                        <EndingCard
+                          key={ending.id}
+                          data={ending}
+                          showWarning={hasWarning}
+                          warningType={ending.costUnclear ? 'cost' : 'similar'}
+                          onClick={() => handleCardClick(ending)}
+                        />
+                      );
+                    })}
+                  </View>
+                )
+              ))
+            ) : (
+              filteredEndings.map((ending) => {
+                const similar = getSimilarEndings(ending.id);
+                const hasWarning = similar.length > 0 || ending.costUnclear;
+                return (
+                  <EndingCard
+                    key={ending.id}
+                    data={ending}
+                    showWarning={hasWarning}
+                    warningType={ending.costUnclear ? 'cost' : 'similar'}
+                    onClick={() => handleCardClick(ending)}
+                  />
+                );
+              })
+            )}
+          </View>
+        </>
+      )}
+
+      {/* =============== 路径视图 =============== */}
+      {viewMode === 'graph' && (
+        <View className={styles.graphArea}>
+          <View className={styles.graphLegendBar}>
+            <View className={styles.graphLegendCard}>
+              <Text className={styles.graphLegendTitle}>🗺️ 灵感 → 结局 路径图</Text>
+              <Text className={styles.graphLegendHint}>
+                点击结局节点可查看详情；可前往「灵感速记」为灵感绑定通向的结局
+              </Text>
+            </View>
+            <View className={styles.graphLegendRow}>
+              {(['bad', 'hidden', 'true'] as EndingType[]).map((t) => (
+                <View key={t} className={styles.graphLegendItem}>
+                  <View
+                    className={styles.graphLegendDot}
+                    style={{ background: getEndingTypeColor(t).text }}
+                  />
+                  <Text className={styles.graphLegendLabel}>
+                    {ENDING_TYPE_LABELS[t]}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {graphRows.length === 0 ? (
+            <View className={styles.graphEmptyWrap}>
+              <EmptyState
+                icon="🕸️"
+                title="还没有串起因果路径"
+                description="先去「灵感速记」为每个灵感勾选通向的结局，再来这里查看完整的因果路径图"
+              />
+            </View>
+          ) : (
+            <>
+              {graphRows.map((row) => (
+                <View key={row.inspiration.id} className={styles.graphRowCard}>
+                  <View
+                    className={styles.graphInspirationNode}
+                    onClick={() => handleInspirationCardClick(row.inspiration.id)}
+                  >
+                    <Text className={styles.graphInspirationDot}>●</Text>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text className={styles.graphInspirationTitle}>
+                        {row.inspiration.title || '未命名灵感'}
+                      </Text>
+                      <Text className={styles.graphInspirationDesc} numberOfLines={2}>
+                        {row.inspiration.description}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View className={styles.graphEdges}>
+                    {row.inspiration.endingEdges.map((edge, idx) => {
+                      const ending = endings.find((e) => e.id === edge.endingId);
+                      if (!ending) return null;
+                      return (
+                        <View key={edge.endingId}>
+                          {idx < row.inspiration.endingEdges.length && (
+                            <View className={styles.edgeConnector}>
+                              <View className={styles.edgeLine} />
+                              <Text className={styles.edgeArrow}>↳</Text>
+                            </View>
+                          )}
+                          <View
+                            className={classnames(
+                              styles.graphEndingNode,
+                              `ending-${edge.type}`
+                            )}
+                            style={{
+                              borderColor: getEndingTypeColor(edge.type).text,
+                              background: getEndingTypeColor(edge.type).bg
+                            }}
+                            onClick={() => handleEndingNodeClick(edge.endingId)}
+                          >
+                            <View className={styles.graphEndingMain}>
+                              <Text
+                                className={styles.graphEndingBadge}
+                                style={{
+                                  background: getEndingTypeColor(edge.type).bg,
+                                  color: getEndingTypeColor(edge.type).text,
+                                  border: `1rpx solid ${getEndingTypeColor(edge.type).border}`
+                                }}
+                              >
+                                {ENDING_TYPE_LABELS[edge.type]}
+                              </Text>
+                              <Text className={styles.graphEndingTitle}>
+                                {ending.title}
+                              </Text>
+                            </View>
+                            <View className={styles.graphEndingMeta}>
+                              <Text className={styles.graphEndingDifficulty}>
+                                难度{getDifficultyLabel(ending.difficulty)}
+                              </Text>
+                              <View
+                                className={styles.graphEndingCausalityBtn}
+                                onClick={(e) => {
+                                  e.stopPropagation?.();
+                                  handleGotoCausalityFromGraph(edge.endingId);
+                                }}
+                              >
+                                <Text className={styles.graphEndingCausalityText}>🔍 因果检查</Text>
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
+
+          {/* 未连通部分 */}
+          {(orphanInspirations.length > 0 || orphanEndings.length > 0) && (
+            <View className={styles.orphanSection}>
+              <View className={styles.orphanHeader}>
+                <Text className={styles.orphanHeaderTitle}>🔌 还没连起来的节点</Text>
+                <Text className={styles.orphanHeaderHint}>
+                  把下面这些连进因果链，整棵结局树会更完整
+                </Text>
+              </View>
+
+              {orphanInspirations.length > 0 && (
+                <View className={styles.orphanBlock}>
+                  <Text className={styles.orphanBlockLabel}>
+                    💡 未绑定结局的灵感（{orphanInspirations.length}）
+                  </Text>
+                  <View className={styles.orphanChipRow}>
+                    {orphanInspirations.map((ins) => (
+                      <View key={ins.id} className={styles.orphanChip}>
+                        <Text className={styles.orphanChipText} numberOfLines={1}>
+                          {ins.title || '未命名灵感'}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {orphanEndings.length > 0 && (
+                <View className={styles.orphanBlock}>
+                  <Text className={styles.orphanBlockLabel}>
+                    🎴 未关联灵感的结局（{orphanEndings.length}）
+                  </Text>
+                  <View className={styles.orphanChipRow}>
+                    {orphanEndings.map((e) => (
+                      <View
+                        key={e.id}
+                        className={classnames(styles.orphanChip, 'endingChip')}
+                        style={{
+                          borderColor: getEndingTypeColor(e.type).text,
+                          background: getEndingTypeColor(e.type).bg
+                        }}
+                        onClick={() => handleEndingNodeClick(e.id)}
+                      >
+                        <Text
+                          className={styles.orphanChipText}
+                          style={{ color: getEndingTypeColor(e.type).text }}
+                          numberOfLines={1}
+                        >
+                          {e.title}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* 详情弹窗 */}
       {selectedEnding && !showEditor && !showCostEditor && (
         <View className={styles.modalMask} onClick={closeModal}>
           <ScrollView
@@ -622,7 +878,7 @@ const EndingsPage: React.FC = () => {
         </View>
       )}
 
-      {/* 代价快速补充弹窗 */}
+      {/* 代价快速编辑器 */}
       {showCostEditor && selectedEnding && (
         <View className={styles.modalMask} onClick={() => setShowCostEditor(false)}>
           <View
@@ -814,6 +1070,11 @@ const EndingsPage: React.FC = () => {
                     💡 标记为"代价不明确"后，结局卡册会提醒你补充
                   </Text>
                 )}
+                {!form.costUnclear && !form.cost.trim() && (
+                  <Text className={styles.formWarning}>
+                    ⚠️ 已关闭"尚不明确"，请在上方填写具体的代价内容，否则无法保存
+                  </Text>
+                )}
               </View>
 
               <View className={styles.formSection}>
@@ -833,7 +1094,7 @@ const EndingsPage: React.FC = () => {
                   <Text className={styles.formHint}>暂无灵感，先去「灵感速记」记录吧</Text>
                 ) : (
                   <View className={styles.endingCheckList}>
-                    {inspirations.slice(0, 10).map((ins) => {
+                    {inspirations.slice(0, 12).map((ins) => {
                       const checked = form.relatedInspirationIds.includes(ins.id);
                       return (
                         <View
@@ -845,7 +1106,7 @@ const EndingsPage: React.FC = () => {
                             {checked && <Text className={styles.smallCheckboxTick}>✓</Text>}
                           </View>
                           <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text className={styles.endingCheckTitle}>{ins.title}</Text>
+                            <Text className={styles.endingCheckTitle}>{ins.title || '未命名灵感'}</Text>
                             <Text className={styles.endingCheckHint} numberOfLines={1}>
                               {ins.description}
                             </Text>
