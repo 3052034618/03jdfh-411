@@ -5,9 +5,10 @@ import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import { useGameStore } from '@/store/gameStore';
 import QuestionBubble from '@/components/QuestionBubble';
+import TagChip from '@/components/TagChip';
 import EmptyState from '@/components/EmptyState';
 import type { Ending, EndingType } from '@/types';
-import { ENDING_TYPE_LABELS } from '@/types';
+import { ENDING_TYPE_LABELS, QUESTION_CATEGORY_LABELS, QUESTION_CATEGORY_ICONS } from '@/types';
 import { getEndingTypeColor, getDifficultyLabel } from '@/utils/aiPrompt';
 
 const CausalityPage: React.FC = () => {
@@ -18,7 +19,8 @@ const CausalityPage: React.FC = () => {
     selectEnding,
     regenerateQuestions,
     answerQuestion,
-    getEndingRelatedInspirations
+    getEndingRelatedInspirations,
+    getCategoryProgress
   } = useGameStore();
 
   const selectedEnding = useMemo(
@@ -38,6 +40,11 @@ const CausalityPage: React.FC = () => {
     return { total, answered, percent: Math.round((answered / total) * 100) };
   }, [causalityQuestions]);
 
+  const categoryProgress = useMemo(() => {
+    if (!selectedEndingId) return {};
+    return getCategoryProgress(selectedEndingId);
+  }, [selectedEndingId, getCategoryProgress]);
+
   useEffect(() => {
     if (endings.length > 0 && !selectedEndingId) {
       selectEnding(endings[0].id);
@@ -56,7 +63,8 @@ const CausalityPage: React.FC = () => {
   };
 
   const handleAnswer = (questionId: string, answer: string) => {
-    answerQuestion(questionId, answer);
+    if (!selectedEndingId) return;
+    answerQuestion(selectedEndingId, questionId, answer);
     Taro.vibrateShort && Taro.vibrateShort({ type: 'light' });
   };
 
@@ -75,6 +83,19 @@ const CausalityPage: React.FC = () => {
     if (percent >= 50) return { color: '#F4D03F' };
     return {};
   };
+
+  const getCategoryColor = (category: string) => {
+    const map: Record<string, { bg: string; text: string }> = {
+      timing: { bg: 'rgba(241, 196, 15, 0.15)', text: '#F4D03F' },
+      knowledge: { bg: 'rgba(52, 152, 219, 0.15)', text: '#5DADE2' },
+      mechanism: { bg: 'rgba(155, 89, 182, 0.15)', text: '#AF7AC5' },
+      consequence: { bg: 'rgba(231, 76, 60, 0.15)', text: '#EC7063' },
+      motivation: { bg: 'rgba(46, 204, 113, 0.15)', text: '#58D68D' }
+    };
+    return map[category] || map.mechanism;
+  };
+
+  const categoryList = Object.entries(categoryProgress);
 
   return (
     <View className={styles.container}>
@@ -237,6 +258,47 @@ const CausalityPage: React.FC = () => {
               </View>
             </View>
           </View>
+
+          {/* 分类进度 */}
+          {categoryList.length > 0 && (
+            <View className={styles.categorySection}>
+              <Text className={styles.categorySectionTitle}>📂 各环节补充情况</Text>
+              <View className={styles.categoryGrid}>
+                {categoryList.map(([category, info]) => {
+                  const percent = info.total > 0 ? Math.round((info.answered / info.total) * 100) : 0;
+                  const c = getCategoryColor(category);
+                  return (
+                    <View key={category} className={styles.categoryItem}>
+                      <View className={styles.categoryHeader}>
+                        <Text className={styles.categoryIcon}>
+                          {QUESTION_CATEGORY_ICONS[category as keyof typeof QUESTION_CATEGORY_ICONS]}
+                        </Text>
+                        <View style={{ flex: 1 }}>
+                          <Text className={styles.categoryName} style={{ color: c.text }}>
+                            {QUESTION_CATEGORY_LABELS[category as keyof typeof QUESTION_CATEGORY_LABELS]}
+                          </Text>
+                          <Text className={styles.categoryProgressText}>
+                            {info.answered}/{info.total} · {percent}%
+                          </Text>
+                        </View>
+                      </View>
+                      <View className={styles.categoryBarBg}>
+                        <View
+                          className={styles.categoryBarFill}
+                          style={{ width: `${percent}%`, background: c.text }}
+                        />
+                      </View>
+                      {info.answered < info.total && (
+                        <Text className={styles.categoryMissing}>
+                          还差 {info.total - info.answered} 个{QUESTION_CATEGORY_LABELS[category as keyof typeof QUESTION_CATEGORY_LABELS]}问题没补
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          )}
 
           <View className={styles.refreshBtn} onClick={handleRefresh}>
             <Text className={styles.refreshBtnText}>🔄 换一组问题</Text>

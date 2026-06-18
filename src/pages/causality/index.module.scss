@@ -316,6 +316,80 @@
   color: $color-text-tertiary;
 }
 
+.categorySection {
+  margin-bottom: $spacing-lg;
+}
+
+.categorySectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.categoryGrid {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.categoryItem {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 1rpx solid $color-border;
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.categoryIcon {
+  font-size: 32rpx;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: $radius-round;
+  flex-shrink: 0;
+}
+
+.categoryName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  display: block;
+}
+
+.categoryProgressText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.categoryBarBg {
+  height: 10rpx;
+  background: $color-bg-input;
+  border-radius: $radius-round;
+  overflow: hidden;
+  margin-bottom: 6rpx;
+}
+
+.categoryBarFill {
+  height: 100%;
+  border-radius: $radius-round;
+  transition: width 0.4s ease;
+}
+
+.categoryMissing {
+  font-size: $font-size-xs;
+  color: $color-warning;
+  line-height: 1.4;
+}
+
 .refreshBtn {
   display: inline-flex;
   align-items: center;

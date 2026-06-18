@@ -481,3 +481,499 @@
   border: 2rpx solid rgba(46, 204, 113, 0.3);
   color: $color-success;
 }
+
+.fabMini {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(155, 89, 182, 0.4);
+  margin-left: $spacing-md;
+  transition: transform $transition-fast;
+
+  &:active {
+    transform: scale(0.94);
+  }
+}
+
+.fabMiniIcon {
+  font-size: 40rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+  margin-top: -4rpx;
+}
+
+.editEndingBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-base;
+  background: rgba(155, 89, 182, 0.1);
+  border: 1rpx solid rgba(155, 89, 182, 0.3);
+  color: $color-primary-light;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-md;
+  margin-top: $spacing-sm;
+
+  &:active {
+    background: rgba(155, 89, 182, 0.2);
+  }
+}
+
+.primaryCtaBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-lg;
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-lg;
+  box-shadow: 0 8rpx 24rpx rgba(155, 89, 182, 0.4);
+
+  &:active {
+    transform: scale(0.99);
+  }
+
+  &[disabled] {
+    opacity: 0.4;
+  }
+}
+
+.modalSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.fixBtn {
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+  background: rgba(155, 89, 182, 0.1);
+  padding: 6rpx 16rpx;
+  border-radius: $radius-button;
+  font-weight: $font-weight-semibold;
+}
+
+.editInlineBtn {
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+  margin-top: $spacing-sm;
+  display: block;
+  font-weight: $font-weight-medium;
+  text-align: right;
+}
+
+// ===== 代价快速编辑器 =====
+
+.costEditorContent {
+  width: 100%;
+  background: $color-bg-card;
+  border-top-left-radius: 32rpx;
+  border-top-right-radius: 32rpx;
+  padding: $spacing-md $page-padding 80rpx;
+  animation: slideUp 0.3s ease;
+}
+
+.costEditorTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.costEditorSubtitle {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-top: $spacing-sm;
+  margin-bottom: $spacing-lg;
+  display: block;
+  line-height: 1.5;
+}
+
+.costEditorHint {
+  padding: $spacing-md;
+  background: rgba(52, 152, 219, 0.08);
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+  border: 1rpx solid rgba(52, 152, 219, 0.15);
+
+  Text {
+    font-size: $font-size-xs;
+    color: #5DADE2;
+    line-height: 1.6;
+  }
+}
+
+.costEditorTextarea {
+  width: 100%;
+  min-height: 180rpx;
+  background: $color-bg-input;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: 1.6;
+  border: 1rpx solid $color-border;
+  box-sizing: border-box;
+}
+
+.costEditorActions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-xl;
+}
+
+.secondaryBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  background: $color-bg-input;
+  color: $color-text-secondary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-lg;
+
+  &:active {
+    background: $color-bg-hover;
+  }
+}
+
+.primaryBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-lg;
+  box-shadow: 0 8rpx 24rpx rgba(155, 89, 182, 0.4);
+
+  &:active {
+    transform: scale(0.99);
+  }
+
+  &[disabled] {
+    opacity: 0.4;
+    box-shadow: none;
+  }
+}
+
+// ===== 结局编辑器表单 =====
+
+.formSection {
+  margin-bottom: $spacing-xl;
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+  display: block;
+}
+
+.formInput {
+  width: 100%;
+  height: 84rpx;
+  background: $color-bg-input;
+  border-radius: $radius-md;
+  padding: 0 $spacing-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  border: 1rpx solid $color-border;
+  box-sizing: border-box;
+}
+
+.formTextarea {
+  width: 100%;
+  min-height: 120rpx;
+  background: $color-bg-input;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: 1.6;
+  border: 1rpx solid $color-border;
+  box-sizing: border-box;
+}
+
+.formHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: 1.5;
+  display: block;
+  margin-top: $spacing-sm;
+}
+
+.typeSelector {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.levelSelector {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.levelOption {
+  flex: 1;
+  padding: $spacing-md 0;
+  background: $color-bg-input;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-border;
+  text-align: center;
+  transition: all $transition-fast;
+
+  &.active {
+    border: 2rpx solid;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.levelOptionText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  font-weight: $font-weight-medium;
+}
+
+.conditionInputRow {
+  display: flex;
+  gap: $spacing-sm;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.conditionInput {
+  flex: 1;
+  height: 72rpx;
+  background: $color-bg-input;
+  border-radius: $radius-md;
+  padding: 0 $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  border: 1rpx solid $color-border;
+  box-sizing: border-box;
+}
+
+.addConditionBtn {
+  padding: 0 $spacing-md;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  background: rgba(155, 89, 182, 0.1);
+  border: 1rpx solid rgba(155, 89, 182, 0.3);
+  border-radius: $radius-md;
+
+  &:active {
+    background: rgba(155, 89, 182, 0.2);
+  }
+}
+
+.addConditionText {
+  font-size: $font-size-sm;
+  color: $color-primary-light;
+  font-weight: $font-weight-semibold;
+}
+
+.conditionChips {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.conditionChip {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-input;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-border;
+}
+
+.conditionChipText {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.5;
+}
+
+.conditionChipRemove {
+  font-size: 32rpx;
+  color: $color-text-tertiary;
+  line-height: 1;
+  padding: 4rpx;
+}
+
+.costUnclearSwitch {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.switchLabel {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.switchBox {
+  width: 68rpx;
+  height: 36rpx;
+  background: $color-bg-input;
+  border-radius: $radius-round;
+  position: relative;
+  padding: 2rpx;
+  transition: background $transition-fast;
+  border: 1rpx solid $color-border;
+
+  &.switchOn {
+    background: linear-gradient(135deg, $color-primary-light, $color-primary);
+    border-color: transparent;
+  }
+}
+
+.switchDot {
+  width: 32rpx;
+  height: 32rpx;
+  background: $color-text-white;
+  border-radius: $radius-round;
+  position: absolute;
+  top: 2rpx;
+  left: 2rpx;
+  transition: transform $transition-fast;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+}
+
+.switchOn .switchDot {
+  transform: translateX(32rpx);
+}
+
+.endingCheckList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.endingCheckItem {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  background: $color-bg-input;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-border;
+  transition: all $transition-fast;
+
+  &:active {
+    transform: scale(0.99);
+  }
+
+  &.endingCheckItemActive {
+    background: rgba(155, 89, 182, 0.12);
+    border-color: $color-primary;
+  }
+}
+
+.smallCheckbox {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: $radius-sm;
+  border: 2rpx solid $color-border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4rpx;
+  flex-shrink: 0;
+  background: $color-bg-card;
+}
+
+.endingCheckItemActive .smallCheckbox {
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  border-color: $color-primary;
+}
+
+.smallCheckboxTick {
+  font-size: 22rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+}
+
+.endingCheckTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.endingCheckHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: 1.4;
+  display: block;
+  @include text-ellipsis;
+}
+
+.footerActions {
+  position: sticky;
+  bottom: 0;
+  background: $color-bg-card;
+  padding-top: $spacing-lg;
+  display: flex;
+  gap: $spacing-md;
+  padding-bottom: 20rpx;
+}
+
+.cancelBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  background: $color-bg-input;
+  color: $color-text-secondary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-lg;
+
+  &:active {
+    background: $color-bg-hover;
+  }
+}
+
+.saveBtn {
+  @include button-reset;
+  flex: 1.5;
+  height: $button-height-lg;
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-lg;
+  box-shadow: 0 8rpx 24rpx rgba(155, 89, 182, 0.4);
+
+  &:active {
+    transform: scale(0.99);
+  }
+
+  &[disabled] {
+    opacity: 0.4;
+    box-shadow: none;
+  }
+}

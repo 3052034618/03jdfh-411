@@ -28,6 +28,8 @@ export interface CausalityQuestion {
   category: 'timing' | 'knowledge' | 'mechanism' | 'consequence' | 'motivation';
 }
 
+export type AnswerArchive = Record<string, Record<string, { answered: boolean; answer?: string }>>;
+
 export interface Ending {
   id: string;
   title: string;
@@ -48,6 +50,7 @@ export interface GameState {
   endings: Ending[];
   selectedEndingId: string | null;
   causalityQuestions: CausalityQuestion[];
+  answerArchive: AnswerArchive;
 }
 
 export const INFLUENCE_LABELS: Record<InfluenceDimension, string> = {
@@ -69,4 +72,12 @@ export const QUESTION_CATEGORY_LABELS: Record<CausalityQuestion['category'], str
   mechanism: '触发机制',
   consequence: '连锁后果',
   motivation: '角色动机'
+};
+
+export const QUESTION_CATEGORY_ICONS: Record<CausalityQuestion['category'], string> = {
+  timing: '⏰',
+  knowledge: '💡',
+  mechanism: '⚙️',
+  consequence: '🔗',
+  motivation: '🧠'
 };

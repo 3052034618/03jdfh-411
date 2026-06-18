@@ -7,14 +7,14 @@ import { useGameStore } from '@/store/gameStore';
 import InspirationCard from '@/components/InspirationCard';
 import TagChip from '@/components/TagChip';
 import EmptyState from '@/components/EmptyState';
-import type { Influence, InfluenceDimension, Inspiration } from '@/types';
-import { INFLUENCE_LABELS } from '@/types';
-import { suggestDimensions, generateInfluencePrompt, suggestTags } from '@/utils/aiPrompt';
+import type { Influence, InfluenceDimension, Inspiration, EndingType } from '@/types';
+import { INFLUENCE_LABELS, ENDING_TYPE_LABELS } from '@/types';
+import { suggestDimensions, generateInfluencePrompt, suggestTags, getEndingTypeColor } from '@/utils/aiPrompt';
 
 type FilterType = 'all' | InfluenceDimension;
 
 const InspirationPage: React.FC = () => {
-  const { inspirations, addInspiration, updateInspiration, deleteInspiration } = useGameStore();
+  const { inspirations, endings, addInspiration, updateInspiration, deleteInspiration } = useGameStore();
   const [filter, setFilter] = useState<FilterType>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -23,6 +23,7 @@ const InspirationPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [influences, setInfluences] = useState<Influence[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedEndingIds, setSelectedEndingIds] = useState<string[]>([]);
 
   const suggestedDims = useMemo(() => suggestDimensions(title + description), [title, description]);
   const suggestedTags = useMemo(() => suggestTags({ title, description }), [title, description]);
@@ -57,6 +58,7 @@ const InspirationPage: React.FC = () => {
     setDescription('');
     setInfluences([]);
     setSelectedTags([]);
+    setSelectedEndingIds([]);
     setShowModal(true);
   };
 
@@ -66,7 +68,16 @@ const InspirationPage: React.FC = () => {
     setDescription(item.description);
     setInfluences([...item.influences]);
     setSelectedTags([...item.tags]);
+    setSelectedEndingIds([...item.relatedEndingIds]);
     setShowModal(true);
+  };
+
+  const toggleEndingSelection = (endingId: string) => {
+    if (selectedEndingIds.includes(endingId)) {
+      setSelectedEndingIds(selectedEndingIds.filter((id) => id !== endingId));
+    } else {
+      setSelectedEndingIds([...selectedEndingIds, endingId]);
+    }
   };
 
   const closeModal = () => {
@@ -122,7 +133,7 @@ const InspirationPage: React.FC = () => {
       title: title.trim(),
       description: description.trim(),
       influences: validInfluences,
-      relatedEndingIds: [],
+      relatedEndingIds: selectedEndingIds,
       tags: selectedTags
     };
 
@@ -384,6 +395,50 @@ const InspirationPage: React.FC = () => {
                         onClick={() => toggleTag(tag)}
                       />
                     ))}
+                </View>
+              )}
+            </View>
+
+            <View className={styles.formSection}>
+              <Text className={styles.formLabel}>🎯 通向的结局</Text>
+              <Text className={styles.formSubHint}>
+                勾选这个选择点会通向哪些结局，保存后会在因果检查页围绕它生成追问
+              </Text>
+
+              {endings.length === 0 ? (
+                <View className={styles.noEndingHint}>
+                  <Text>还没有结局，先去「结局卡册」添加一些吧 →</Text>
+                </View>
+              ) : (
+                <View className={styles.endingCheckList}>
+                  {endings.map((ending) => {
+                    const checked = selectedEndingIds.includes(ending.id);
+                    const colors = getEndingTypeColor(ending.type);
+                    return (
+                      <View
+                        key={ending.id}
+                        className={classnames(styles.endingCheckItem, checked && styles.endingCheckItemActive)}
+                        style={checked ? { borderColor: colors.border, background: colors.bg } : {}}
+                        onClick={() => toggleEndingSelection(ending.id)}
+                      >
+                        <View className={styles.checkbox}>
+                          {checked && <Text className={styles.checkboxTick}>✓</Text>}
+                        </View>
+                        <View className={styles.endingCheckContent}>
+                          <View className={styles.endingCheckHeader}>
+                            <Text
+                              className={styles.endingCheckType}
+                              style={{ background: colors.bg, color: colors.text }}
+                            >
+                              {ENDING_TYPE_LABELS[ending.type]}
+                            </Text>
+                            <Text className={styles.endingCheckTitle}>{ending.title}</Text>
+                          </View>
+                          <Text className={styles.endingCheckHint}>🔑 {ending.triggerHint}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
                 </View>
               )}
             </View>
