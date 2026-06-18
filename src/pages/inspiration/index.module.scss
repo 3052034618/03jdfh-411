@@ -1,0 +1,400 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  padding: $spacing-lg $page-padding 200rpx;
+  min-height: 100vh;
+}
+
+.pageHeader {
+  margin-bottom: $spacing-lg;
+}
+
+.pageTitle {
+  font-size: 48rpx;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+  letter-spacing: 2rpx;
+}
+
+.pageTitleAccent {
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.pageSubtitle {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  line-height: 1.6;
+}
+
+.filterBar {
+  @include scroll-x-container;
+  margin-bottom: $spacing-lg;
+  padding-bottom: $spacing-xs;
+}
+
+.filterItem {
+  @include scroll-x-item(auto);
+  padding: 12rpx 28rpx;
+  border-radius: $radius-button;
+  background: $color-bg-card;
+  border: 1rpx solid $color-border;
+  margin-right: $spacing-sm;
+  transition: all $transition-fast;
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &.active {
+    background: linear-gradient(135deg, rgba(155, 89, 182, 0.25), rgba(108, 52, 131, 0.2));
+    border-color: $color-primary;
+  }
+}
+
+.filterText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  white-space: nowrap;
+}
+
+.active .filterText {
+  color: $color-primary-light;
+  font-weight: $font-weight-semibold;
+}
+
+.statsRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.statCard {
+  flex: 1;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  border: 1rpx solid $color-border;
+}
+
+.statNumber {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-primary-light;
+  display: block;
+}
+
+.statLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.listArea {
+  // 列表区域
+}
+
+.emptyWrap {
+  margin-top: 120rpx;
+}
+
+.fabButton {
+  position: fixed;
+  right: $spacing-lg;
+  bottom: 180rpx;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary-light 0%, $color-primary 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 32rpx $color-shadow-glow;
+  z-index: 99;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.94);
+  }
+}
+
+.fabIcon {
+  font-size: 56rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-light;
+  line-height: 1;
+  margin-top: -4rpx;
+}
+
+// ===== Modal 弹窗 =====
+
+.modalMask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+.modalContent {
+  width: 100%;
+  max-height: 88vh;
+  background: $color-bg-card;
+  border-top-left-radius: 32rpx;
+  border-top-right-radius: 32rpx;
+  padding: $spacing-xl $page-padding 64rpx;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+
+.modalDragBar {
+  width: 80rpx;
+  height: 8rpx;
+  background: $color-border;
+  border-radius: $radius-round;
+  margin: 0 auto $spacing-xl;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xl;
+}
+
+.modalTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.modalClose {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background: $color-bg-input;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:active {
+    background: $color-bg-card-hover;
+  }
+}
+
+.modalCloseText {
+  font-size: 32rpx;
+  color: $color-text-tertiary;
+  line-height: 1;
+}
+
+.formSection {
+  margin-bottom: $spacing-xl;
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.formInput {
+  width: 100%;
+  background: $color-bg-input;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: $color-text-disabled;
+  }
+}
+
+.formTextarea {
+  composes: formInput;
+  min-height: 180rpx;
+  line-height: 1.7;
+}
+
+.aiHintBox {
+  margin-top: $spacing-sm;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.1), rgba(155, 89, 182, 0.02));
+  border-radius: $radius-md;
+  border: 1rpx dashed rgba(155, 89, 182, 0.3);
+}
+
+.aiHintLabel {
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+  font-weight: $font-weight-semibold;
+  margin-bottom: 4rpx;
+  display: block;
+}
+
+.aiHintText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: 1.6;
+}
+
+.dimSelector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.influenceList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.influenceCard {
+  background: $color-bg-input;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 1rpx solid $color-border;
+}
+
+.influenceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.influenceDimLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.removeInfluenceBtn {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: $radius-round;
+  background: rgba(231, 76, 60, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:active {
+    background: rgba(231, 76, 60, 0.25);
+  }
+}
+
+.removeInfluenceText {
+  font-size: 28rpx;
+  color: #EC7063;
+  line-height: 1;
+}
+
+.levelSelector {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.levelOption {
+  flex: 1;
+  height: 56rpx;
+  border-radius: $radius-sm;
+  background: $color-bg-card;
+  border: 1rpx solid $color-border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &.active {
+    border: none;
+  }
+}
+
+.levelOptionText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  font-weight: $font-weight-semibold;
+}
+
+.active .levelOptionText {
+  color: $color-text-white;
+}
+
+.tagSuggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.selectedTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+  min-height: 48rpx;
+}
+
+.footerActions {
+  position: sticky;
+  bottom: 0;
+  background: $color-bg-card;
+  padding-top: $spacing-lg;
+  display: flex;
+  gap: $spacing-md;
+  padding-bottom: 20rpx;
+}
+
+.cancelBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  background: $color-bg-input;
+  border: 1rpx solid $color-border;
+  color: $color-text-secondary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-button;
+
+  &:active {
+    background: $color-bg-hover;
+  }
+}
+
+.saveBtn {
+  @include button-reset;
+  flex: 2;
+  height: $button-height-lg;
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  border-radius: $radius-button;
+  box-shadow: 0 4rpx 16rpx $color-shadow-glow;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+
+  &[disabled] {
+    opacity: 0.4;
+    box-shadow: none;
+  }
+}

@@ -1,0 +1,164 @@
+@use '@/styles/variables.scss' as *;
+
+.wrapper {
+  margin-bottom: $spacing-xl;
+  padding-left: $spacing-xl;
+  position: relative;
+  animation: slideUp 0.35s ease;
+
+  &.answered {
+    .questionBubble {
+      opacity: 0.85;
+    }
+  }
+}
+
+.numberBadge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  color: $color-text-white;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx $color-shadow-glow;
+}
+
+.questionBubble {
+  background: $color-bg-card;
+  border: 1rpx solid $color-border;
+  border-left: 4rpx solid transparent;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+}
+
+.bubbleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.categoryTag {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-round;
+}
+
+.answeredBadge {
+  font-size: $font-size-xs;
+  color: $color-success;
+  font-weight: $font-weight-medium;
+}
+
+.questionText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-loose;
+  display: block;
+}
+
+.answerSection {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  border: 1rpx dashed $color-border;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 120rpx;
+  background: $color-bg-input;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  line-height: 1.6;
+  box-sizing: border-box;
+  border: none;
+}
+
+.textareaPlaceholder {
+  color: $color-text-disabled;
+}
+
+.actionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: $spacing-md;
+}
+
+.hintText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  flex: 1;
+  padding-right: $spacing-md;
+  line-height: 1.4;
+}
+
+.submitBtn {
+  @include button-reset;
+  height: $button-height-sm;
+  padding: 0 $spacing-lg;
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  color: $color-text-white;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-button;
+  flex-shrink: 0;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.97);
+  }
+
+  &[disabled] {
+    opacity: 0.4;
+  }
+}
+
+.answerBubble {
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.08), rgba(46, 204, 113, 0.02));
+  border: 1rpx solid rgba(46, 204, 113, 0.2);
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+}
+
+.answerLabel {
+  font-size: $font-size-xs;
+  color: $color-success;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-xs;
+}
+
+.answerText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+.editBtn {
+  @include button-reset;
+  height: 56rpx;
+  padding: 0 $spacing-md;
+  background: transparent;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-border;
+
+  &:active {
+    background: $color-bg-hover;
+  }
+}

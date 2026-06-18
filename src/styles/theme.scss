@@ -1,0 +1,50 @@
+// ============================================
+// 主题配色变量 - 深夜恐怖灵感陪伴风格
+// ============================================
+
+// 品牌主题色：暗紫色神秘氛围
+$color-primary: #6C3483;
+$color-primary-light: #9B59B6;
+$color-primary-dark: #4A235A;
+$color-primary-glow: rgba(155, 89, 182, 0.25);
+
+// 功能色 - 结局分类
+$color-bad-ending: #E74C3C;
+$color-bad-ending-light: #EC7063;
+$color-true-ending: #F1C40F;
+$color-true-ending-light: #F4D03F;
+$color-hidden-ending: #2ECC71;
+$color-hidden-ending-light: #58D68D;
+
+// 通用功能色
+$color-success: #2ECC71;
+$color-warning: #F39C12;
+$color-error: #E74C3C;
+$color-info: #3498DB;
+
+// 背景色 - 深夜风格
+$color-bg-page: #1C1C2E;
+$color-bg-card: #252540;
+$color-bg-card-hover: #2D2D4D;
+$color-bg-input: #1A1A2E;
+$color-bg-modal: rgba(28, 28, 46, 0.95);
+
+// 文本色
+$color-text-primary: #F4F4F6;
+$color-text-secondary: #B8B8C8;
+$color-text-tertiary: #78788A;
+$color-text-disabled: #4A4A5A;
+$color-text-white: #FFFFFF;
+
+// 边框色
+$color-border: #3D3D5C;
+$color-divider: #2A2A40;
+
+// 业务相关变量
+$color-tag-ghost: rgba(231, 76, 60, 0.15);
+$color-tag-trust: rgba(46, 204, 113, 0.15);
+$color-tag-escape: rgba(52, 152, 219, 0.15);
+$color-tag-custom: rgba(155, 89, 182, 0.15);
+
+$color-shadow-card: rgba(0, 0, 0, 0.3);
+$color-shadow-glow: rgba(155, 89, 182, 0.2);

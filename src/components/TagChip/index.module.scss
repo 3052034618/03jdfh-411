@@ -1,0 +1,47 @@
+@use '@/styles/variables.scss' as *;
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 10rpx 20rpx;
+  border-radius: $radius-round;
+  border: 1rpx solid transparent;
+  transition: all $transition-fast;
+  margin-right: $spacing-sm;
+  margin-bottom: $spacing-sm;
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  &.active {
+    // 动态设置背景和边框
+  }
+}
+
+.label {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.removeBtn {
+  width: 28rpx;
+  height: 28rpx;
+  margin-left: $spacing-xs;
+  border-radius: $radius-round;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.removeText {
+  font-size: 28rpx;
+  line-height: 1;
+  color: inherit;
+  margin-top: -2rpx;
+}

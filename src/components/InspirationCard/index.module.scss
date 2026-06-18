@@ -1,0 +1,115 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  border: 1rpx solid $color-border;
+  box-shadow: 0 4rpx 20rpx $color-shadow-card;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.99);
+    background: $color-bg-card-hover;
+  }
+
+  &.compact {
+    padding: $spacing-md;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-sm;
+}
+
+.title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.time {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-left: $spacing-md;
+  flex-shrink: 0;
+  padding-top: 4rpx;
+}
+
+.description {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  margin-bottom: $spacing-md;
+  display: block;
+}
+
+.influences {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.influenceItem {
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  border-left: 4rpx solid transparent;
+}
+
+.influenceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xs;
+}
+
+.influenceLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.levelDots {
+  display: flex;
+  gap: 6rpx;
+}
+
+.levelDot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: $radius-round;
+  background: $color-border;
+}
+
+.levelDotActive {
+  // 动态设置背景色
+}
+
+.influenceContent {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.6;
+  display: block;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 1rpx solid $color-divider;
+}
+
+.tag {
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+  background: rgba(155, 89, 182, 0.1);
+  padding: 6rpx 16rpx;
+  border-radius: $radius-round;
+}
