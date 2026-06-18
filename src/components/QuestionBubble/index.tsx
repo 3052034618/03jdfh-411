@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Textarea, Button } from '@tarojs/components';
 import classnames from 'classnames';
 import styles from './index.module.scss';
@@ -15,6 +15,12 @@ interface QuestionBubbleProps {
 const QuestionBubble: React.FC<QuestionBubbleProps> = ({ data, onAnswer, index, highlighted }) => {
   const [answerText, setAnswerText] = useState(data.answer || '');
   const [isEditing, setIsEditing] = useState(!data.answered);
+
+  // 监听外部 data 变化，当结局切换导致 data 更新时，重置内部状态
+  useEffect(() => {
+    setAnswerText(data.answer || '');
+    setIsEditing(!data.answered);
+  }, [data.id, data.answer, data.answered]);
 
   const handleSubmit = () => {
     if (answerText.trim()) {

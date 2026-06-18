@@ -1398,4 +1398,48 @@
     border-color: #F1C40F;
     background: rgba(241, 196, 15, 0.18);
   }
+
+  &.required {
+    .graphEndingTitle {
+      color: #5DADE2;
+    }
+  }
+
+  &.branch {
+    .graphEndingTitle {
+      color: #58D68D;
+    }
+  }
+}
+
+.graphEndingBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-wrap: wrap;
+  margin-bottom: 4rpx;
+}
+
+.graphEndingTagBlue {
+  font-size: 18rpx;
+  color: #5DADE2;
+  background: rgba(52, 152, 219, 0.15);
+  padding: 4rpx 10rpx;
+  border-radius: $radius-round;
+  font-weight: $font-weight-semibold;
+  border: 1rpx solid rgba(52, 152, 219, 0.3);
+}
+
+.graphEndingTagGreen {
+  font-size: 18rpx;
+  color: #58D68D;
+  background: rgba(46, 204, 113, 0.15);
+  padding: 4rpx 10rpx;
+  border-radius: $radius-round;
+  font-weight: $font-weight-semibold;
+  border: 1rpx solid rgba(46, 204, 113, 0.3);
+}
+
+.graphEndingMain {
+  flex-wrap: wrap;
 }

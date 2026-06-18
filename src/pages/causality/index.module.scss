@@ -1201,3 +1201,57 @@
   background: rgba(155, 89, 182, 0.08) !important;
   box-shadow: 0 0 0 4rpx rgba(155, 89, 182, 0.1);
 }
+
+// 时间线新增交互元素
+.timelineNodeHeader {
+  cursor: pointer;
+  transition: all $transition-base;
+  flex-wrap: wrap;
+
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.timelineNodeGotoBtn {
+  padding: 6rpx 16rpx;
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.25), rgba(52, 152, 219, 0.2));
+  border: 1rpx solid rgba(155, 89, 182, 0.4);
+  border-radius: $radius-round;
+  margin-left: auto;
+  flex-shrink: 0;
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.timelineNodeGotoText {
+  font-size: 20rpx;
+  color: $color-primary-light;
+  font-weight: $font-weight-semibold;
+}
+
+.timelineNodeGap {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.timelineNodeGapAction {
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(52, 152, 219, 0.12);
+  border: 1rpx dashed rgba(52, 152, 219, 0.35);
+  border-radius: $radius-sm;
+  align-self: flex-start;
+
+  &:active {
+    background: rgba(52, 152, 219, 0.2);
+  }
+}
+
+.timelineNodeGapActionText {
+  font-size: $font-size-xs;
+  color: #5DADE2;
+  font-weight: $font-weight-semibold;
+}

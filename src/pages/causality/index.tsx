@@ -407,7 +407,7 @@ const CausalityPage: React.FC = () => {
                 ) : (
                   causalityQuestions.map((q, idx) => (
                     <QuestionBubble
-                      key={q.id}
+                      key={`${selectedEndingId || ''}_${q.id}`}
                       data={q}
                       index={idx}
                       onAnswer={(ans) => handleAnswer(q.id, ans)}
@@ -439,27 +439,39 @@ const CausalityPage: React.FC = () => {
                       <Text className={styles.reviewHeaderTitle}>📑 因果链复盘笔记</Text>
                       <View
                         className={styles.exportBtn}
-                        onClick={async () => {
-                          const notes = exportReviewToNotes(selectedEndingId || '');
-                          if (!notes.trim()) {
-                            Taro.showToast({ title: '还没有内容可导出', icon: 'none' });
-                            return;
-                          }
-                          try {
-                            Taro.setClipboardData({
-                              data: notes,
-                              success: () => {
-                                Taro.showToast({ title: '已复制到剪贴板 📋', icon: 'none' });
+                        onClick={() => {
+                          Taro.showActionSheet({
+                            itemList: [
+                              '📋 导出「分段复盘」格式',
+                              '⏳ 导出「剧情时间线」格式'
+                            ],
+                            success: (res) => {
+                              const format: 'sections' | 'timeline' = res.tapIndex === 0 ? 'sections' : 'timeline';
+                              const notes = exportReviewToNotes(selectedEndingId || '', format);
+                              if (!notes.trim()) {
+                                Taro.showToast({ title: '还没有内容可导出', icon: 'none' });
+                                return;
                               }
-                            });
-                          } catch (e) {
-                            Taro.showModal({
-                              title: '创作笔记',
-                              content: '复制到剪贴板失败，以下是完整内容：\n\n' + notes,
-                              showCancel: false,
-                              confirmText: '好的'
-                            });
-                          }
+                              try {
+                                Taro.setClipboardData({
+                                  data: notes,
+                                  success: () => {
+                                    Taro.showToast({
+                                      title: res.tapIndex === 0 ? '分段复盘已复制 📋' : '时间线笔记已复制 ⏳',
+                                      icon: 'none'
+                                    });
+                                  }
+                                });
+                              } catch (e) {
+                                Taro.showModal({
+                                  title: '创作笔记',
+                                  content: '复制到剪贴板失败，以下是完整内容：\n\n' + notes,
+                                  showCancel: false,
+                                  confirmText: '好的'
+                                });
+                              }
+                            }
+                          });
                         }}
                       >
                         <Text className={styles.exportBtnText}>📋 导出笔记</Text>
@@ -490,23 +502,21 @@ const CausalityPage: React.FC = () => {
                       </View>
                     </View>
 
-                    {/* 折叠模式切换 */}
-                    {reviewSubMode === 'sections' && (
-                      <View className={styles.collapseToggleRow}>
-                        <Text
-                          className={classnames(styles.collapseOption, collapseMode === 'all' && styles.active)}
-                          onClick={() => setCollapseMode('all')}
-                        >
-                          📂 显示全部
-                        </Text>
-                        <Text
-                          className={classnames(styles.collapseOption, collapseMode === 'incomplete' && styles.active)}
-                          onClick={() => setCollapseMode('incomplete')}
-                        >
-                          👁️ 只看未补全
-                        </Text>
-                      </View>
-                    )}
+                    {/* 折叠模式切换 - 两种模式通用 */}
+                    <View className={styles.collapseToggleRow}>
+                      <Text
+                        className={classnames(styles.collapseOption, collapseMode === 'all' && styles.active)}
+                        onClick={() => setCollapseMode('all')}
+                      >
+                        📂 显示全部
+                      </Text>
+                      <Text
+                        className={classnames(styles.collapseOption, collapseMode === 'incomplete' && styles.active)}
+                        onClick={() => setCollapseMode('incomplete')}
+                      >
+                        👁️ 只看待补
+                      </Text>
+                    </View>
                   </View>
 
                   {/* =============== 分段复盘模式 =============== */}
@@ -643,6 +653,11 @@ const CausalityPage: React.FC = () => {
                           const catProgress = categoryProgress[cat];
                           const isComplete = catProgress && catProgress.answered === catProgress.total;
 
+                          // 只看待补模式：跳过完全完成的环节
+                          if (collapseMode === 'incomplete' && isComplete) return null;
+
+                          const isCatCollapsed = collapsedSections[`tl_${cat}`] && isComplete;
+
                           return (
                             <View key={cat} className={styles.timelineNode}>
                               <View className={styles.timelineNodeLeft}>
@@ -676,7 +691,16 @@ const CausalityPage: React.FC = () => {
                                   className={styles.timelineNodeHeader}
                                   style={{
                                     background: getCategoryColor(cat).bg,
-                                    borderLeft: `4rpx solid ${getCategoryColor(cat).text}`
+                                    borderLeft: `4rpx solid ${getCategoryColor(cat).text}`,
+                                    cursor: 'pointer'
+                                  }}
+                                  onClick={() => {
+                                    if (isComplete) {
+                                      setCollapsedSections((prev) => ({
+                                        ...prev,
+                                        [`tl_${cat}`]: !prev[`tl_${cat}`]
+                                      }));
+                                    }
                                   }}
                                 >
                                   <Text className={styles.timelineNodeIcon}>{section.icon}</Text>
@@ -686,14 +710,33 @@ const CausalityPage: React.FC = () => {
                                   >
                                     {section.label}
                                   </Text>
+                                  {isComplete && (
+                                    <Text className={styles.sectionCompleteBadge}>✓ 已补完</Text>
+                                  )}
                                   {!isComplete && catProgress && (
                                     <Text className={styles.timelineNodeProgressBadge}>
                                       {catProgress.answered}/{catProgress.total}
                                     </Text>
                                   )}
+                                  {isComplete && (
+                                    <Text className={styles.collapseArrow}>
+                                      {isCatCollapsed ? '›' : '⌄'}
+                                    </Text>
+                                  )}
+                                  {!isComplete && (
+                                    <View
+                                      className={styles.timelineNodeGotoBtn}
+                                      onClick={(e) => {
+                                        e.stopPropagation?.();
+                                        setViewMode('interview');
+                                      }}
+                                    >
+                                      <Text className={styles.timelineNodeGotoText}>补一下</Text>
+                                    </View>
+                                  )}
                                 </View>
 
-                                {section.questions.length > 0 ? (
+                                {!isCatCollapsed && section.questions.length > 0 ? (
                                   <View className={styles.timelineNodeItems}>
                                     {section.questions.map((qa, idx) => (
                                       <View key={qa.questionId} className={styles.timelineItem}>
@@ -708,11 +751,19 @@ const CausalityPage: React.FC = () => {
                                       </View>
                                     ))}
                                   </View>
-                                ) : (
+                                ) : null}
+
+                                {!isCatCollapsed && section.questions.length === 0 && catProgress && catProgress.total > 0 && (
                                   <View className={styles.timelineNodeGap}>
                                     <Text className={styles.timelineNodeGapText}>
                                       ⏳ 这个环节还没有补充内容...
                                     </Text>
+                                    <View
+                                      className={styles.timelineNodeGapAction}
+                                      onClick={() => setViewMode('interview')}
+                                    >
+                                      <Text className={styles.timelineNodeGapActionText}>❓ 去追问模式回答</Text>
+                                    </View>
                                   </View>
                                 )}
                               </View>
@@ -720,6 +771,18 @@ const CausalityPage: React.FC = () => {
                           );
                         })}
                       </View>
+
+                      {collapseMode === 'incomplete' &&
+                        reviewData.sections.every((s) => {
+                          const p = categoryProgress[s.category];
+                          return p && p.answered === p.total;
+                        }) && (
+                        <View className={styles.allCompleteHint}>
+                          <Text className={styles.allCompleteText}>
+                            🎉 所有环节都已补完！切回「显示全部」查看完整的剧情时间线，或继续在追问模式深入补充细节。
+                          </Text>
+                        </View>
+                      )}
 
                       {/* 结局终点 */}
                       <View className={styles.timelineEnding}>

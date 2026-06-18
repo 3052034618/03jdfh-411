@@ -64,7 +64,7 @@ interface GameStore extends GameState {
   getInspirationsLeadingToEnding: (endingId: string) => Inspiration[];
   getCategoryProgress: (endingId: string) => Record<string, { total: number; answered: number }>;
   getEndingReview: (endingId: string) => { sections: ReviewSection[]; answeredCount: number; totalCount: number };
-  exportReviewToNotes: (endingId: string) => string;
+  exportReviewToNotes: (endingId: string, format?: 'sections' | 'timeline') => string;
   getGraphData: () => {
     inspirations: (Inspiration & { endingEdges: { endingId: string; type: Ending['type'] }[] })[];
     endings: Ending[];
@@ -74,6 +74,8 @@ interface GameStore extends GameState {
     highlightedEndingIds: string[];
     badDiversionInspirationIds: string[];
     allConnectedEndingIds: string[];
+    requiredEndingIds: string[];
+    branchEndingIds: string[];
   };
 }
 
@@ -567,33 +569,139 @@ export const useGameStore = create<GameStore>((set, get) => ({
     };
   },
 
-  exportReviewToNotes: (endingId) => {
+  exportReviewToNotes: (endingId, format = 'sections') => {
     const ending = get().endings.find((e) => e.id === endingId);
     if (!ending) return '';
-    const review = get().getEndingReview(endingId);
     const typeLabel = { bad: '坏结局', hidden: '隐藏结局', true: '真结局' }[ending.type];
+
+    // 获取完整的问题列表（包括未回答的，用于 TODO）
+    const allQuestions = generateCausalityQuestions(endingId, get().inspirations);
+    const mergedAll = mergeAnswersWithQuestions(allQuestions, get().answerArchive, endingId);
+    const answeredList = mergedAll.filter((q) => q.answered);
+    const unansweredList = mergedAll.filter((q) => !q.answered);
+
+    const review = get().getEndingReview(endingId);
 
     let text = `# 【${typeLabel}】${ending.title}\n\n`;
     text += `> ${ending.description}\n\n`;
-    text += `🔑 触发条件：${ending.conditions.join('；')}\n\n`;
-    if (ending.cost) text += `⚖️ 结局代价：${ending.cost}\n\n`;
-    text += `---\n\n`;
-    text += `## 📝 因果链复盘笔记\n\n`;
-    text += `> 补全进度：${review.answeredCount}/${review.totalCount} 个问题\n\n`;
-
-    review.sections.forEach((section) => {
-      if (section.questions.length === 0) return;
-      text += `### ${section.icon} ${section.label}\n\n`;
-      section.questions.forEach((qa, idx) => {
-        text += `**Q${idx + 1}：${qa.question}**\n\n`;
-        text += `A：${qa.answer}\n\n`;
-      });
+    text += `**类型**：${typeLabel}  **难度**：${ending.difficulty}星\n\n`;
+    text += `**🔑 触发条件**\n`;
+    ending.conditions.forEach((c, i) => {
+      text += `  ${i + 1}. ${c}\n`;
     });
+    text += `\n`;
+    if (ending.cost) {
+      text += `**⚖️ 结局代价**：${ending.cost}\n\n`;
+    }
+    if (ending.triggerHint) {
+      text += `**💡 设计提示**：${ending.triggerHint}\n\n`;
+    }
+    text += `---\n\n`;
 
-    const unanswered = review.totalCount - review.answeredCount;
-    if (unanswered > 0) {
+    // 关联灵感（选择点）
+    const relatedInspirations = get().getEndingRelatedInspirations(endingId);
+    if (relatedInspirations.length > 0) {
+      text += `## 🎯 关键选择点（${relatedInspirations.length}个）\n\n`;
+      relatedInspirations.forEach((ins, i) => {
+        text += `**选择点 ${i + 1}：${ins.title}**\n`;
+        text += `> ${ins.description}\n\n`;
+      });
       text += `---\n\n`;
-      text += `⚠️ **还有 ${unanswered} 个问题尚未补全**，回到因果检查页继续完善这条因果链。\n`;
+    }
+
+    text += `## 📝 因果链复盘笔记\n\n`;
+    text += `> 补全进度：**${review.answeredCount}/${review.totalCount}**（${Math.round(review.answeredCount / Math.max(review.totalCount, 1) * 100)}%）\n\n`;
+
+    if (format === 'timeline') {
+      // ============ 时间线格式 ============
+      text += `### ⏳ 剧情时间线视图\n\n`;
+      text += `从选择点出发，按「时间→信息→机制→后果→动机」串联：\n\n`;
+      text += `\`\`\`\n`;
+
+      const timelineNodes: string[] = [];
+      REVIEW_CATEGORIES.forEach((cat) => {
+        const section = review.sections.find((s) => s.category === cat);
+        if (!section) return;
+        const progress = get().getCategoryProgress(endingId)[cat] || { total: 0, answered: 0 };
+        const icon = REVIEW_ICONS[cat];
+        const label = REVIEW_LABELS[cat];
+        const status = progress.total > 0 && progress.answered === progress.total
+          ? '✅'
+          : progress.answered > 0
+          ? '⏳'
+          : '⭕';
+        timelineNodes.push(`${status} ${icon} ${label} (${progress.answered}/${progress.total})`);
+      });
+
+      if (timelineNodes.length > 0) {
+        text += `       ${timelineNodes.join('\n       │\n       ')}\n`;
+      }
+      text += `       │\n       ▼\n    🎬【${ending.title}】\n`;
+      text += `\`\`\`\n\n`;
+
+      // 每个环节的详细内容
+      REVIEW_CATEGORIES.forEach((cat) => {
+        const section = review.sections.find((s) => s.category === cat);
+        if (!section) return;
+        const progress = get().getCategoryProgress(endingId)[cat] || { total: 0, answered: 0 };
+        const isComplete = progress.total > 0 && progress.answered === progress.total;
+
+        text += `#### ${section.icon} ${section.label} ${isComplete ? '✅' : `(${progress.answered}/${progress.total})`}\n\n`;
+
+        if (section.questions.length === 0) {
+          text += `> ⏳ *这个环节还没有补充内容*\n\n`;
+        } else {
+          section.questions.forEach((qa, idx) => {
+            text += `**Q${idx + 1}：${qa.question}**\n\n`;
+            text += `${qa.answer}\n\n`;
+          });
+        }
+      });
+    } else {
+      // ============ 分段复盘格式 ============
+      review.sections.forEach((section) => {
+        const progress = get().getCategoryProgress(endingId)[section.category] || { total: 0, answered: 0 };
+        const isComplete = progress.total > 0 && progress.answered === progress.total;
+        text += `### ${section.icon} ${section.label} ${isComplete ? '✅' : `(${progress.answered}/${progress.total})`}\n\n`;
+
+        if (section.questions.length === 0) {
+          text += `> ⏳ *这个环节还没有补充内容，切到追问模式补一下*\n\n`;
+        } else {
+          section.questions.forEach((qa, idx) => {
+            text += `**Q${idx + 1}：${qa.question}**\n\n`;
+            text += `A：${qa.answer}\n\n`;
+          });
+        }
+      });
+    }
+
+    // TODO 列表
+    if (unansweredList.length > 0) {
+      text += `---\n\n`;
+      text += `## 🕳️ 待补问题 TODO（${unansweredList.length}个）\n\n`;
+      text += `> 切到「追问模式」回答这些问题，让因果链更完整\n\n`;
+
+      REVIEW_CATEGORIES.forEach((cat) => {
+        const catUnanswered = unansweredList.filter((q) => q.category === cat);
+        if (catUnanswered.length === 0) return;
+        const label = REVIEW_LABELS[cat];
+        const icon = REVIEW_ICONS[cat];
+        text += `#### ${icon} ${label}（${catUnanswered.length}个）\n\n`;
+        catUnanswered.forEach((q, i) => {
+          text += `- [ ] **TODO-${i + 1}**：${q.question}\n`;
+        });
+        text += `\n`;
+      });
+    }
+
+    // 结尾
+    if (review.answeredCount < review.totalCount) {
+      const gap = review.totalCount - review.answeredCount;
+      text += `---\n\n`;
+      text += `> ⚠️ **还有 ${gap} 个问题尚未补全**，回到噩灵感官的因果检查页继续完善这条因果链。\n`;
+    } else {
+      text += `---\n\n`;
+      text += `> 🎉 **所有环节都已补完！** 这条因果链已经可以自洽了，继续设计更多结局吧。\n`;
     }
 
     return text;
@@ -621,7 +729,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         highlightedInspirationIds: [],
         highlightedEndingIds: [],
         badDiversionInspirationIds: [],
-        allConnectedEndingIds: []
+        allConnectedEndingIds: [],
+        requiredEndingIds: [],
+        branchEndingIds: []
       };
     }
 
@@ -653,11 +763,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     });
 
+    // 必经前置结局：所有通向目标结局的灵感，共同都通向的隐藏/真结局（除目标本身）
+    // 即：每个高亮灵感都包含的结局 ID
+    const nonTargetEndings = allConnectedEndingIds.filter((eid) => eid !== targetEndingId);
+    const requiredEndingIds: string[] = nonTargetEndings.filter((eid) => {
+      const e = endings.find((x) => x.id === eid);
+      if (!e || e.type === 'bad') return false; // 坏结局不算必经前置
+      // 检查：每个高亮灵感都关联了这个结局
+      return highlightedInspirationIds.every((insId) => {
+        const ins = inspirations.find((i) => i.id === insId);
+        return ins?.relatedEndingIds.includes(eid);
+      });
+    });
+
+    // 旁支结局：关联了至少一个高亮灵感，但不是必经前置，也不是目标本身
+    const branchEndingIds: string[] = allConnectedEndingIds.filter((eid) =>
+      eid !== targetEndingId && !requiredEndingIds.includes(eid)
+    );
+
     return {
       highlightedInspirationIds,
       highlightedEndingIds,
       badDiversionInspirationIds,
-      allConnectedEndingIds
+      allConnectedEndingIds,
+      requiredEndingIds,
+      branchEndingIds
     };
   }
 }));

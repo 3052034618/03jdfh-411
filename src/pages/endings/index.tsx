@@ -232,16 +232,61 @@ const EndingsPage: React.FC = () => {
 
   const handleEndingNodeClick = (endingId: string) => {
     const ending = endings.find((e) => e.id === endingId);
-    if (ending) {
-      // 如果是路线规划模式，点击结局切换目标
-      if (planningTargetEndingId !== null) {
-        if (ending.type === 'true') {
-          handlePlanningTargetSelect(endingId);
-          return;
-        } else {
-          Taro.showToast({ title: '只能选择真结局作为路线规划目标', icon: 'none' });
+    if (!ending) return;
+
+    // 如果是路线规划模式，先弹出 ActionSheet 提供更多选项
+    if (planningTargetEndingId !== null) {
+      const insLeading = inspirations.filter((i) => i.relatedEndingIds.includes(endingId));
+      const options = [
+        '🔍 带着去因果检查补链',
+        '🎯 查看详情',
+        planningTargetEndingId !== endingId && ending.type === 'true' ? '⭐ 切换为规划目标' : null
+      ].filter(Boolean) as string[];
+
+      Taro.showActionSheet({
+        itemList: options,
+        success: (res) => {
+          if (res.tapIndex === 0) {
+            // 带着去因果检查
+            if (insLeading.length > 0) {
+              // 有相关灵感，让用户选
+              const insOptions = insLeading.slice(0, 5).map((i) => `带着灵感：${i.title.slice(0, 10)}${i.title.length > 10 ? '...' : ''}`);
+              Taro.showActionSheet({
+                itemList: [...insOptions, '不指定灵感，直接跳因果检查'],
+                success: (r2) => {
+                  if (r2.tapIndex < insOptions.length) {
+                    handleGotoCausalityFromGraph(endingId, insLeading[r2.tapIndex].id);
+                  } else {
+                    handleGotoCausalityFromGraph(endingId);
+                  }
+                }
+              });
+            } else {
+              handleGotoCausalityFromGraph(endingId);
+            }
+          } else if (res.tapIndex === 1) {
+            setSelectedEnding(ending);
+          } else if (res.tapIndex === 2 && ending.type === 'true' && planningTargetEndingId !== endingId) {
+            handlePlanningTargetSelect(endingId);
+          }
         }
-      }
+      });
+      return;
+    }
+
+    // 非规划模式，真结局可设为目标，其他看详情
+    if (ending.type === 'true' && trueEndings.length > 1) {
+      Taro.showActionSheet({
+        itemList: ['🎯 设为路线规划目标', '🎴 查看详情'],
+        success: (res) => {
+          if (res.tapIndex === 0) {
+            handlePlanningTargetSelect(endingId);
+          } else {
+            setSelectedEnding(ending);
+          }
+        }
+      });
+    } else {
       setSelectedEnding(ending);
     }
   };
@@ -429,6 +474,14 @@ const EndingsPage: React.FC = () => {
 
   const isEndingHighlighted = (endingId: string) => {
     return highlightData?.highlightedEndingIds.includes(endingId) ?? false;
+  };
+
+  const isEndingRequired = (endingId: string) => {
+    return highlightData?.requiredEndingIds.includes(endingId) ?? false;
+  };
+
+  const isEndingBranch = (endingId: string) => {
+    return highlightData?.branchEndingIds.includes(endingId) ?? false;
   };
 
   return (
@@ -722,8 +775,9 @@ const EndingsPage: React.FC = () => {
                 <View className={styles.planningSummaryBar}>
                   <Text className={styles.planningSummaryText}>
                     <Text style={{ color: '#F1C40F', fontWeight: 'bold' }}>路线分析：</Text>
-                    通向【{planningTargetEnding.title}】共 {highlightData.highlightedInspirationIds.length} 个灵感节点，
-                    其中 {highlightData.badDiversionInspirationIds.length} 个节点会岔向坏结局，设计时请注意。
+                    通向【{planningTargetEnding.title}】共 {highlightData.highlightedInspirationIds.length} 个灵感节点 · 
+                    必经前置 {highlightData.requiredEndingIds.length} 个 · 旁支 {highlightData.branchEndingIds.length} 个 · 
+                    其中 {highlightData.badDiversionInspirationIds.length} 个节点会岔向坏结局。
                   </Text>
                 </View>
               )}
@@ -796,6 +850,8 @@ const EndingsPage: React.FC = () => {
                         const ending = endings.find((e) => e.id === edge.endingId);
                         if (!ending) return null;
                         const targetHighlighted = isEndingHighlighted(edge.endingId);
+                        const isRequired = isEndingRequired(edge.endingId);
+                        const isBranch = isEndingBranch(edge.endingId);
                         return (
                           <View key={edge.endingId}>
                             {idx < row.inspiration.endingEdges.length && (
@@ -803,7 +859,11 @@ const EndingsPage: React.FC = () => {
                                 <View
                                   className={styles.edgeLine}
                                   style={{
-                                    background: targetHighlighted
+                                    background: isRequired
+                                      ? 'linear-gradient(180deg, rgba(52, 152, 219, 0.8), rgba(52, 152, 219, 0.2))'
+                                      : isBranch
+                                      ? 'linear-gradient(180deg, rgba(46, 204, 113, 0.6), rgba(46, 204, 113, 0.15))'
+                                      : targetHighlighted
                                       ? 'linear-gradient(180deg, rgba(46, 204, 113, 0.7), rgba(46, 204, 113, 0.15))'
                                       : undefined
                                   }}
@@ -811,7 +871,7 @@ const EndingsPage: React.FC = () => {
                                 <Text
                                   className={styles.edgeArrow}
                                   style={{
-                                    color: targetHighlighted ? '#2ECC71' : undefined
+                                    color: isRequired ? '#3498DB' : isBranch ? '#2ECC71' : targetHighlighted ? '#2ECC71' : undefined
                                   }}
                                 >
                                   ↳
@@ -823,38 +883,64 @@ const EndingsPage: React.FC = () => {
                                 styles.graphEndingNode,
                                 `ending-${edge.type}`,
                                 targetHighlighted && 'highlighted',
-                                planningTargetEndingId === edge.endingId && 'target'
+                                planningTargetEndingId === edge.endingId && 'target',
+                                isRequired && 'required',
+                                isBranch && 'branch'
                               )}
                               style={{
                                 borderColor: planningTargetEndingId === edge.endingId
                                   ? '#F1C40F'
+                                  : isRequired
+                                  ? '#3498DB'
+                                  : isBranch
+                                  ? '#2ECC71'
                                   : getEndingTypeColor(edge.type).text,
                                 background: planningTargetEndingId === edge.endingId
                                   ? 'rgba(241, 196, 15, 0.18)'
+                                  : isRequired
+                                  ? 'linear-gradient(135deg, rgba(52, 152, 219, 0.2), rgba(41, 128, 185, 0.08))'
+                                  : isBranch
+                                  ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(39, 174, 96, 0.06))'
                                   : targetHighlighted
-                                    ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.18), rgba(39, 174, 96, 0.08))'
-                                    : getEndingTypeColor(edge.type).bg,
+                                  ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.18), rgba(39, 174, 96, 0.08))'
+                                  : getEndingTypeColor(edge.type).bg,
                                 boxShadow: planningTargetEndingId === edge.endingId
                                   ? '0 0 0 3rpx rgba(241, 196, 15, 0.35)'
+                                  : isRequired
+                                  ? '0 0 0 2rpx rgba(52, 152, 219, 0.25)'
+                                  : isBranch
+                                  ? '0 0 0 2rpx rgba(46, 204, 113, 0.2)'
                                   : targetHighlighted
-                                    ? '0 0 0 2rpx rgba(46, 204, 113, 0.25)'
-                                    : undefined
+                                  ? '0 0 0 2rpx rgba(46, 204, 113, 0.25)'
+                                  : undefined
                               }}
                               onClick={() => handleEndingNodeClick(edge.endingId)}
                             >
                               <View className={styles.graphEndingMain}>
-                                <Text
-                                  className={styles.graphEndingBadge}
-                                  style={{
-                                    background: getEndingTypeColor(edge.type).bg,
-                                    color: getEndingTypeColor(edge.type).text,
-                                    border: `1rpx solid ${getEndingTypeColor(edge.type).border}`
-                                  }}
-                                >
-                                  {planningTargetEndingId === edge.endingId
-                                    ? '🎯 '
-                                    : ''}{ENDING_TYPE_LABELS[edge.type]}
-                                </Text>
+                                <View className={styles.graphEndingBadgeRow}>
+                                  <Text
+                                    className={styles.graphEndingBadge}
+                                    style={{
+                                      background: getEndingTypeColor(edge.type).bg,
+                                      color: getEndingTypeColor(edge.type).text,
+                                      border: `1rpx solid ${getEndingTypeColor(edge.type).border}`
+                                    }}
+                                  >
+                                    {planningTargetEndingId === edge.endingId
+                                      ? '🎯 '
+                                      : isRequired
+                                      ? '🔹 '
+                                      : isBranch
+                                      ? '🔸 '
+                                      : ''}{ENDING_TYPE_LABELS[edge.type]}
+                                  </Text>
+                                  {isRequired && (
+                                    <Text className={styles.graphEndingTagBlue}>必经前置</Text>
+                                  )}
+                                  {isBranch && (
+                                    <Text className={styles.graphEndingTagGreen}>旁支</Text>
+                                  )}
+                                </View>
                                 <Text className={styles.graphEndingTitle}>
                                   {ending.title}
                                 </Text>
