@@ -11,21 +11,38 @@ import { ENDING_TYPE_LABELS } from '@/types';
 import { getEndingTypeColor, getDifficultyLabel } from '@/utils/aiPrompt';
 
 type ViewMode = 'interview' | 'review';
+type ReviewSubMode = 'sections' | 'timeline';
+type CollapseMode = 'all' | 'incomplete';
+
+const REVIEW_CATEGORY_ORDER: string[] = ['timing', 'knowledge', 'mechanism', 'consequence', 'motivation'];
 
 const CausalityPage: React.FC = () => {
   const {
     endings,
     selectedEndingId,
+    selectedInspirationForCausalityId,
     causalityQuestions,
     selectEnding,
+    selectInspirationForCausality,
     regenerateQuestions,
     answerQuestion,
     getEndingRelatedInspirations,
     getCategoryProgress,
-    getEndingReview
+    getEndingReview,
+    exportReviewToNotes,
+    getInspirationById
   } = useGameStore();
 
+  const contextInspiration = useMemo(() => {
+    if (!selectedInspirationForCausalityId) return null;
+    return getInspirationById(selectedInspirationForCausalityId) || null;
+  }, [selectedInspirationForCausalityId, getInspirationById]);
+
   const [viewMode, setViewMode] = useState<ViewMode>('interview');
+  const [reviewSubMode, setReviewSubMode] = useState<ReviewSubMode>('sections');
+  const [collapseMode, setCollapseMode] = useState<CollapseMode>('all');
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [showExportToast, setShowExportToast] = useState(false);
 
   const selectedEnding = useMemo(
     () => endings.find((e) => e.id === selectedEndingId) || null,
@@ -144,6 +161,23 @@ const CausalityPage: React.FC = () => {
           );
         })}
       </ScrollView>
+
+      {/* 灵感上下文横幅 */}
+      {contextInspiration && (
+        <View className={styles.inspirationContextBanner}>
+          <Text className={styles.inspirationContextIcon}>🎯</Text>
+          <View className={styles.inspirationContextContent}>
+            <Text className={styles.inspirationContextLabel}>当前带着灵感补链</Text>
+            <Text className={styles.inspirationContextTitle}>{contextInspiration.title}</Text>
+          </View>
+          <View
+            className={styles.inspirationContextClear}
+            onClick={() => selectInspirationForCausality(null)}
+          >
+            <Text>清除</Text>
+          </View>
+        </View>
+      )}
 
       {selectedEnding ? (
         <>
@@ -377,6 +411,7 @@ const CausalityPage: React.FC = () => {
                       data={q}
                       index={idx}
                       onAnswer={(ans) => handleAnswer(q.id, ans)}
+                      highlighted={!!contextInspiration}
                     />
                   ))
                 )}
@@ -400,59 +435,322 @@ const CausalityPage: React.FC = () => {
               ) : (
                 <>
                   <View className={styles.reviewHeaderCard}>
-                    <Text className={styles.reviewHeaderTitle}>📑 因果链复盘笔记</Text>
+                    <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <Text className={styles.reviewHeaderTitle}>📑 因果链复盘笔记</Text>
+                      <View
+                        className={styles.exportBtn}
+                        onClick={async () => {
+                          const notes = exportReviewToNotes(selectedEndingId || '');
+                          if (!notes.trim()) {
+                            Taro.showToast({ title: '还没有内容可导出', icon: 'none' });
+                            return;
+                          }
+                          try {
+                            Taro.setClipboardData({
+                              data: notes,
+                              success: () => {
+                                Taro.showToast({ title: '已复制到剪贴板 📋', icon: 'none' });
+                              }
+                            });
+                          } catch (e) {
+                            Taro.showModal({
+                              title: '创作笔记',
+                              content: '复制到剪贴板失败，以下是完整内容：\n\n' + notes,
+                              showCancel: false,
+                              confirmText: '好的'
+                            });
+                          }
+                        }}
+                      >
+                        <Text className={styles.exportBtnText}>📋 导出笔记</Text>
+                      </View>
+                    </View>
                     <Text className={styles.reviewHeaderMeta}>
                       为【{selectedEnding.title}】已补充 {reviewData.answeredCount}/{reviewData.totalCount} 条内容
                     </Text>
                     <Text className={styles.reviewHeaderHint}>
                       💡 以下按「时间→信息→机制→后果→动机」五个环节整理，便于你把整段因果链串起来阅读
                     </Text>
+
+                    {/* 复盘二级 Tab */}
+                    <View className={styles.reviewSubTabs}>
+                      <View
+                        className={classnames(styles.reviewSubTab, reviewSubMode === 'sections' && styles.active)}
+                        onClick={() => setReviewSubMode('sections')}
+                      >
+                        <Text className={styles.reviewSubTabIcon}>📋</Text>
+                        <Text className={styles.reviewSubTabText}>分段复盘</Text>
+                      </View>
+                      <View
+                        className={classnames(styles.reviewSubTab, reviewSubMode === 'timeline' && styles.active)}
+                        onClick={() => setReviewSubMode('timeline')}
+                      >
+                        <Text className={styles.reviewSubTabIcon}>⏳</Text>
+                        <Text className={styles.reviewSubTabText}>剧情时间线</Text>
+                      </View>
+                    </View>
+
+                    {/* 折叠模式切换 */}
+                    {reviewSubMode === 'sections' && (
+                      <View className={styles.collapseToggleRow}>
+                        <Text
+                          className={classnames(styles.collapseOption, collapseMode === 'all' && styles.active)}
+                          onClick={() => setCollapseMode('all')}
+                        >
+                          📂 显示全部
+                        </Text>
+                        <Text
+                          className={classnames(styles.collapseOption, collapseMode === 'incomplete' && styles.active)}
+                          onClick={() => setCollapseMode('incomplete')}
+                        >
+                          👁️ 只看未补全
+                        </Text>
+                      </View>
+                    )}
                   </View>
 
-                  {reviewData.sections.map((section) => (
-                    section.questions.length > 0 && (
-                      <View key={section.category} className={styles.reviewSection}>
+                  {/* =============== 分段复盘模式 =============== */}
+                  {reviewSubMode === 'sections' && (
+                    <>
+                      {REVIEW_CATEGORY_ORDER.map((cat) => {
+                        const section = reviewData.sections.find((s) => s.category === cat);
+                        if (!section) return null;
+
+                        const catProgress = categoryProgress[cat];
+                        const isComplete = catProgress && catProgress.answered === catProgress.total;
+                        const shouldShow = collapseMode === 'all' || !isComplete;
+                        if (!shouldShow && section.questions.length === 0) return null;
+
+                        const isCollapsed = collapsedSections[cat] && isComplete;
+
+                        return (
+                          <View key={section.category} className={styles.reviewSection}>
+                            <View
+                              className={styles.reviewSectionHeader}
+                              style={{
+                                background: getCategoryColor(section.category).bg,
+                                borderLeft: `6rpx solid ${getCategoryColor(section.category).text}`,
+                                cursor: isComplete ? 'pointer' : 'default'
+                              }}
+                              onClick={() => {
+                                if (isComplete) {
+                                  setCollapsedSections((prev) => ({
+                                    ...prev,
+                                    [cat]: !prev[cat]
+                                  }));
+                                }
+                              }}
+                            >
+                              <Text className={styles.reviewSectionIcon}>{section.icon}</Text>
+                              <View style={{ flex: 1 }}>
+                                <Text
+                                  className={styles.reviewSectionTitle}
+                                  style={{ color: getCategoryColor(section.category).text }}
+                                >
+                                  {section.label}
+                                  {isComplete && (
+                                    <Text className={styles.sectionCompleteBadge}>✓ 已补完</Text>
+                                  )}
+                                </Text>
+                                <Text className={styles.reviewSectionCount}>
+                                  已补充 {section.questions.length} 条
+                                  {catProgress && ` · ${catProgress.answered}/${catProgress.total}`}
+                                </Text>
+                              </View>
+                              {isComplete && (
+                                <Text className={styles.collapseArrow}>
+                                  {isCollapsed ? '›' : '⌄'}
+                                </Text>
+                              )}
+                            </View>
+
+                            {!isCollapsed && section.questions.map((qa, idx) => (
+                              <View key={qa.questionId} className={styles.qaCard}>
+                                <View className={styles.qaCardIndex}>
+                                  <Text className={styles.qaCardIndexText}>{idx + 1}</Text>
+                                </View>
+                                <View className={styles.qaCardBody}>
+                                  <View className={styles.qaQuestionRow}>
+                                    <Text className={styles.qaQuestionLabel}>问</Text>
+                                    <Text className={styles.qaQuestionText}>{qa.question}</Text>
+                                  </View>
+                                  <View className={styles.qaAnswerRow}>
+                                    <Text className={styles.qaAnswerLabel}>答</Text>
+                                    <Text className={styles.qaAnswerText}>{qa.answer}</Text>
+                                  </View>
+                                </View>
+                              </View>
+                            ))}
+
+                            {!isCollapsed && section.questions.length === 0 && catProgress && catProgress.total > 0 && (
+                              <View className={styles.emptySectionHint}>
+                                <Text className={styles.emptySectionHintText}>
+                                  这个环节还差 {catProgress.total} 个问题没回答，切到追问模式补一下 →
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+
+                      {collapseMode === 'incomplete' &&
+                        reviewData.sections.every((s) => {
+                          const p = categoryProgress[s.category];
+                          return p && p.answered === p.total;
+                        }) && (
+                        <View className={styles.allCompleteHint}>
+                          <Text className={styles.allCompleteText}>
+                            🎉 所有环节都已补完！你可以切换到「剧情时间线」模式，把整段因果链串起来阅读。
+                          </Text>
+                        </View>
+                      )}
+                    </>
+                  )}
+
+                  {/* =============== 剧情时间线模式 =============== */}
+                  {reviewSubMode === 'timeline' && (
+                    <View className={styles.timelineArea}>
+                      <View className={styles.timelineIntroCard}>
+                        <Text className={styles.timelineIntroTitle}>⏳ 剧情时间线</Text>
+                        <Text className={styles.timelineIntroText}>
+                          从选择点出发，按「时间→信息→机制→后果→动机」串起整段因果链，看起来像一条从选择到后果的剧情链。
+                        </Text>
+                      </View>
+
+                      {/* 灵感选择点作为时间线起点 */}
+                      {relatedInspirations.length > 0 && (
+                        <View className={styles.timelineChoicePoints}>
+                          <Text className={styles.timelineChoiceLabel}>🎯 关键选择点</Text>
+                          {relatedInspirations.slice(0, 3).map((ins, i) => (
+                            <View key={ins.id} className={styles.timelineChoiceCard}>
+                              <Text className={styles.timelineChoiceIndex}>#{i + 1}</Text>
+                              <View style={{ flex: 1, minWidth: 0 }}>
+                                <Text className={styles.timelineChoiceTitle}>{ins.title}</Text>
+                                <Text className={styles.timelineChoiceDesc} numberOfLines={2}>
+                                  {ins.description}
+                                </Text>
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                      {/* 时间线主体 */}
+                      <View className={styles.timelineMain}>
+                        {REVIEW_CATEGORY_ORDER.map((cat, catIdx) => {
+                          const section = reviewData.sections.find((s) => s.category === cat);
+                          if (!section) return null;
+                          const catProgress = categoryProgress[cat];
+                          const isComplete = catProgress && catProgress.answered === catProgress.total;
+
+                          return (
+                            <View key={cat} className={styles.timelineNode}>
+                              <View className={styles.timelineNodeLeft}>
+                                <View
+                                  className={styles.timelineNodeDot}
+                                  style={{
+                                    background: isComplete
+                                      ? getCategoryColor(cat).text
+                                      : 'transparent',
+                                    borderColor: getCategoryColor(cat).text
+                                  }}
+                                >
+                                  {isComplete && (
+                                    <Text className={styles.timelineNodeDotTick}>✓</Text>
+                                  )}
+                                </View>
+                                {catIdx < REVIEW_CATEGORY_ORDER.length - 1 && (
+                                  <View
+                                    className={styles.timelineNodeLine}
+                                    style={{
+                                      background: isComplete
+                                        ? `linear-gradient(180deg, ${getCategoryColor(cat).text}, ${getCategoryColor(REVIEW_CATEGORY_ORDER[catIdx + 1]).text})`
+                                        : '#3A3A5A'
+                                    }}
+                                  />
+                                )}
+                              </View>
+
+                              <View className={styles.timelineNodeContent}>
+                                <View
+                                  className={styles.timelineNodeHeader}
+                                  style={{
+                                    background: getCategoryColor(cat).bg,
+                                    borderLeft: `4rpx solid ${getCategoryColor(cat).text}`
+                                  }}
+                                >
+                                  <Text className={styles.timelineNodeIcon}>{section.icon}</Text>
+                                  <Text
+                                    className={styles.timelineNodeTitle}
+                                    style={{ color: getCategoryColor(cat).text }}
+                                  >
+                                    {section.label}
+                                  </Text>
+                                  {!isComplete && catProgress && (
+                                    <Text className={styles.timelineNodeProgressBadge}>
+                                      {catProgress.answered}/{catProgress.total}
+                                    </Text>
+                                  )}
+                                </View>
+
+                                {section.questions.length > 0 ? (
+                                  <View className={styles.timelineNodeItems}>
+                                    {section.questions.map((qa, idx) => (
+                                      <View key={qa.questionId} className={styles.timelineItem}>
+                                        <View className={styles.timelineItemQ}>
+                                          <Text className={styles.timelineItemQLabel}>Q</Text>
+                                          <Text className={styles.timelineItemQText}>{qa.question}</Text>
+                                        </View>
+                                        <View className={styles.timelineItemA}>
+                                          <Text className={styles.timelineItemALabel}>A</Text>
+                                          <Text className={styles.timelineItemAText}>{qa.answer}</Text>
+                                        </View>
+                                      </View>
+                                    ))}
+                                  </View>
+                                ) : (
+                                  <View className={styles.timelineNodeGap}>
+                                    <Text className={styles.timelineNodeGapText}>
+                                      ⏳ 这个环节还没有补充内容...
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+
+                      {/* 结局终点 */}
+                      <View className={styles.timelineEnding}>
+                        <View className={styles.timelineEndingLine} />
                         <View
-                          className={styles.reviewSectionHeader}
+                          className={styles.timelineEndingCard}
                           style={{
-                            background: getCategoryColor(section.category).bg,
-                            borderLeft: `6rpx solid ${getCategoryColor(section.category).text}`
+                            borderColor: getEndingTypeColor(selectedEnding.type).text,
+                            background: `linear-gradient(135deg, ${getEndingTypeColor(selectedEnding.type).bg}, rgba(0,0,0,0.02))`
                           }}
                         >
-                          <Text className={styles.reviewSectionIcon}>{section.icon}</Text>
-                          <View style={{ flex: 1 }}>
-                            <Text
-                              className={styles.reviewSectionTitle}
-                              style={{ color: getCategoryColor(section.category).text }}
-                            >
-                              {section.label}
-                            </Text>
-                            <Text className={styles.reviewSectionCount}>
-                              已补充 {section.questions.length} 条
-                            </Text>
-                          </View>
+                          <Text
+                            className={styles.timelineEndingBadge}
+                            style={{
+                              background: getEndingTypeColor(selectedEnding.type).bg,
+                              color: getEndingTypeColor(selectedEnding.type).text,
+                              border: `1rpx solid ${getEndingTypeColor(selectedEnding.type).border}`
+                            }}
+                          >
+                            {ENDING_TYPE_LABELS[selectedEnding.type]}
+                          </Text>
+                          <Text className={styles.timelineEndingTitle}>
+                            {selectedEnding.title}
+                          </Text>
+                          <Text className={styles.timelineEndingDesc}>
+                            {selectedEnding.description}
+                          </Text>
                         </View>
-
-                        {section.questions.map((qa, idx) => (
-                          <View key={qa.questionId} className={styles.qaCard}>
-                            <View className={styles.qaCardIndex}>
-                              <Text className={styles.qaCardIndexText}>{idx + 1}</Text>
-                            </View>
-                            <View className={styles.qaCardBody}>
-                              <View className={styles.qaQuestionRow}>
-                                <Text className={styles.qaQuestionLabel}>问</Text>
-                                <Text className={styles.qaQuestionText}>{qa.question}</Text>
-                              </View>
-                              <View className={styles.qaAnswerRow}>
-                                <Text className={styles.qaAnswerLabel}>答</Text>
-                                <Text className={styles.qaAnswerText}>{qa.answer}</Text>
-                              </View>
-                            </View>
-                          </View>
-                        ))}
                       </View>
-                    )
-                  ))}
+                    </View>
+                  )}
 
                   {reviewData.answeredCount < reviewData.totalCount && (
                     <View className={styles.reviewGapCard}>

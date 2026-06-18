@@ -39,7 +39,10 @@ const InspirationPage: React.FC = () => {
     loadDraft,
     deleteDraft,
     commitDraft,
-    getActiveDraft
+    getActiveDraft,
+    getInspirationById,
+    pendingInspirationEditId,
+    setPendingInspirationEditId
   } = useGameStore();
 
   const [view, setView] = useState<InspirationView>('formal');
@@ -59,6 +62,58 @@ const InspirationPage: React.FC = () => {
   const autoSaveTimerRef = useRef<number | null>(null);
   const autoSaveIndicatorRef = useRef<View>(null);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // ===== 立即将当前表单内容 flush 到草稿（清除定时器后直接保存） =====
+  const flushDraft = () => {
+    if (!isDraftMode) return;
+    const activeDraft = getActiveDraft();
+    if (!activeDraft) return;
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    const validInfluences = influences.filter((i) => {
+      if (!i.content.trim() && !i.label) return false;
+      return true;
+    });
+    saveDraft({
+      title,
+      description,
+      influences: validInfluences,
+      relatedEndingIds: selectedEndingIds,
+      tags: selectedTags
+    });
+    setAutoSaveStatus('saved');
+    console.log('[Draft] Flushed to draft', activeDraft.id);
+  };
+
+  // ===== 跨页面打开灵感编辑 =====
+  useEffect(() => {
+    if (pendingInspirationEditId && !showModal) {
+      const ins = getInspirationById(pendingInspirationEditId);
+      if (ins) {
+        openEdit(ins);
+        setPendingInspirationEditId(null);
+      } else {
+        setPendingInspirationEditId(null);
+        Taro.showToast({ title: '灵感不存在或已删除', icon: 'none' });
+      }
+    }
+  }, [pendingInspirationEditId, showModal, getInspirationById, setPendingInspirationEditId]);
+
+  // ===== 页面隐藏时 flush 草稿 =====
+  useEffect(() => {
+    const onHide = () => {
+      if (showModal && isDraftMode) {
+        flushDraft();
+      }
+    };
+    Taro.eventCenter.on('__taro_hide', onHide);
+    return () => {
+      Taro.eventCenter.off('__taro_hide', onHide);
+    };
+  }, [showModal, isDraftMode]);
 
   const suggestedDims = useMemo(() => suggestDimensions(title + description), [title, description]);
   const suggestedTags = useMemo(() => suggestTags({ title, description }), [title, description]);
@@ -273,6 +328,10 @@ const InspirationPage: React.FC = () => {
   };
 
   const closeModal = () => {
+    // 关闭前先把当前输入 flush 到草稿
+    if (isDraftMode && showModal) {
+      flushDraft();
+    }
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = null;
@@ -333,15 +392,13 @@ const InspirationPage: React.FC = () => {
     };
 
     if (isDraftMode) {
-      // 草稿模式下保存 = commitDraft
+      // 草稿模式下保存 = 先 flush 到草稿，再 commitDraft
+      flushDraft();
       const currentDraft = getActiveDraft();
       if (currentDraft) {
-        // 先把最后一次变更写进草稿
-        saveDraft(payload);
         commitDraft(currentDraft.id);
         Taro.showToast({ title: '已转为正式灵感 🕯️', icon: 'none' });
       } else {
-        // fallback：直接加正式灵感
         addInspiration(payload);
         Taro.showToast({ title: '灵感已收录 🕯️', icon: 'none' });
       }

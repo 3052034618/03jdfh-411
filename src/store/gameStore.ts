@@ -36,6 +36,7 @@ interface GameStore extends GameState {
   addInspiration: (data: Omit<Inspiration, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateInspiration: (id: string, data: Partial<Inspiration>) => void;
   deleteInspiration: (id: string) => void;
+  getInspirationById: (id: string) => Inspiration | undefined;
 
   // ========== 草稿箱 ==========
   getActiveDraft: () => InspirationDraft | null;
@@ -51,6 +52,8 @@ interface GameStore extends GameState {
   toggleEndingUnlocked: (id: string) => void;
 
   selectEnding: (id: string | null) => void;
+  selectInspirationForCausality: (id: string | null) => void;
+  setPendingInspirationEditId: (id: string | null) => void;
   regenerateQuestions: (endingId: string) => void;
   answerQuestion: (endingId: string, questionId: string, answer: string) => void;
 
@@ -58,11 +61,19 @@ interface GameStore extends GameState {
   getSimilarEndings: (endingId: string) => Ending[];
   getCostUnclearEndings: () => Ending[];
   getEndingRelatedInspirations: (endingId: string) => Inspiration[];
+  getInspirationsLeadingToEnding: (endingId: string) => Inspiration[];
   getCategoryProgress: (endingId: string) => Record<string, { total: number; answered: number }>;
   getEndingReview: (endingId: string) => { sections: ReviewSection[]; answeredCount: number; totalCount: number };
+  exportReviewToNotes: (endingId: string) => string;
   getGraphData: () => {
     inspirations: (Inspiration & { endingEdges: { endingId: string; type: Ending['type'] }[] })[];
     endings: Ending[];
+  };
+  getHighlightedPath: (targetEndingId: string) => {
+    highlightedInspirationIds: string[];
+    highlightedEndingIds: string[];
+    badDiversionInspirationIds: string[];
+    allConnectedEndingIds: string[];
   };
 }
 
@@ -174,6 +185,8 @@ const initialState: GameState = {
   activeDraftId: loaded.activeDraftId,
   endings: loaded.endings,
   selectedEndingId: loaded.selectedEndingId,
+  selectedInspirationForCausalityId: null,
+  pendingInspirationEditId: null,
   causalityQuestions: initialQuestions,
   answerArchive: loaded.answerArchive
 };
@@ -302,6 +315,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
     get().persist();
     console.log('[Store] deleteInspiration', id);
+  },
+
+  getInspirationById: (id) => {
+    return get().inspirations.find((i) => i.id === id);
   },
 
   // ========== 草稿箱 ==========
@@ -456,6 +473,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     console.log('[Store] selectEnding', id);
   },
 
+  selectInspirationForCausality: (id) => {
+    set({ selectedInspirationForCausalityId: id });
+    console.log('[Store] selectInspirationForCausality', id);
+  },
+
+  setPendingInspirationEditId: (id) => {
+    set({ pendingInspirationEditId: id });
+    console.log('[Store] setPendingInspirationEditId', id);
+  },
+
   regenerateQuestions: (endingId) => {
     set((state) => {
       const fresh = generateCausalityQuestions(endingId, state.inspirations);
@@ -501,6 +528,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return get().inspirations.filter((i) => ending.relatedInspirationIds.includes(i.id));
   },
 
+  getInspirationsLeadingToEnding: (endingId) => {
+    return get().inspirations.filter((i) => i.relatedEndingIds.includes(endingId));
+  },
+
   getCategoryProgress: (endingId) => {
     const questions = generateCausalityQuestions(endingId, get().inspirations);
     const merged = mergeAnswersWithQuestions(questions, get().answerArchive, endingId);
@@ -536,6 +567,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
     };
   },
 
+  exportReviewToNotes: (endingId) => {
+    const ending = get().endings.find((e) => e.id === endingId);
+    if (!ending) return '';
+    const review = get().getEndingReview(endingId);
+    const typeLabel = { bad: '坏结局', hidden: '隐藏结局', true: '真结局' }[ending.type];
+
+    let text = `# 【${typeLabel}】${ending.title}\n\n`;
+    text += `> ${ending.description}\n\n`;
+    text += `🔑 触发条件：${ending.conditions.join('；')}\n\n`;
+    if (ending.cost) text += `⚖️ 结局代价：${ending.cost}\n\n`;
+    text += `---\n\n`;
+    text += `## 📝 因果链复盘笔记\n\n`;
+    text += `> 补全进度：${review.answeredCount}/${review.totalCount} 个问题\n\n`;
+
+    review.sections.forEach((section) => {
+      if (section.questions.length === 0) return;
+      text += `### ${section.icon} ${section.label}\n\n`;
+      section.questions.forEach((qa, idx) => {
+        text += `**Q${idx + 1}：${qa.question}**\n\n`;
+        text += `A：${qa.answer}\n\n`;
+      });
+    });
+
+    const unanswered = review.totalCount - review.answeredCount;
+    if (unanswered > 0) {
+      text += `---\n\n`;
+      text += `⚠️ **还有 ${unanswered} 个问题尚未补全**，回到因果检查页继续完善这条因果链。\n`;
+    }
+
+    return text;
+  },
+
   getGraphData: () => {
     const { inspirations, endings } = get();
     const inspWithEdges = inspirations.map((ins) => ({
@@ -548,5 +611,53 @@ export const useGameStore = create<GameStore>((set, get) => ({
         .filter(Boolean) as { endingId: string; type: Ending['type'] }[]
     }));
     return { inspirations: inspWithEdges, endings };
+  },
+
+  getHighlightedPath: (targetEndingId) => {
+    const { inspirations, endings } = get();
+    const target = endings.find((e) => e.id === targetEndingId);
+    if (!target) {
+      return {
+        highlightedInspirationIds: [],
+        highlightedEndingIds: [],
+        badDiversionInspirationIds: [],
+        allConnectedEndingIds: []
+      };
+    }
+
+    const highlightedInspirationIds: string[] = inspirations
+      .filter((ins) => ins.relatedEndingIds.includes(targetEndingId))
+      .map((ins) => ins.id);
+
+    const highlightedEndingIds = [targetEndingId];
+
+    // 坏结局岔路口：通向高亮灵感的同时，也通向坏结局的灵感
+    const badDiversionInspirationIds: string[] = [];
+    highlightedInspirationIds.forEach((insId) => {
+      const ins = inspirations.find((i) => i.id === insId);
+      if (!ins) return;
+      const hasBadDiversion = ins.relatedEndingIds
+        .some((eid) => {
+          const e = endings.find((x) => x.id === eid);
+          return e && e.type === 'bad' && eid !== targetEndingId;
+        });
+      if (hasBadDiversion) badDiversionInspirationIds.push(insId);
+    });
+
+    const allConnectedEndingIds: string[] = [];
+    highlightedInspirationIds.forEach((insId) => {
+      const ins = inspirations.find((i) => i.id === insId);
+      if (!ins) return;
+      ins.relatedEndingIds.forEach((eid) => {
+        if (!allConnectedEndingIds.includes(eid)) allConnectedEndingIds.push(eid);
+      });
+    });
+
+    return {
+      highlightedInspirationIds,
+      highlightedEndingIds,
+      badDiversionInspirationIds,
+      allConnectedEndingIds
+    };
   }
 }));

@@ -705,3 +705,499 @@
   color: $color-text-tertiary;
   line-height: 1.6;
 }
+
+// ===== 复盘二级 Tab =====
+.reviewSubTabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: $radius-button;
+  padding: 4rpx;
+  margin-top: $spacing-md;
+}
+
+.reviewSubTab {
+  flex: 1;
+  padding: $spacing-sm 0;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.active {
+    background: linear-gradient(135deg, rgba(155, 89, 182, 0.4), rgba(52, 152, 219, 0.3));
+  }
+}
+
+.reviewSubTabIcon {
+  font-size: 24rpx;
+}
+
+.reviewSubTabText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  font-weight: $font-weight-medium;
+}
+
+.active .reviewSubTabText {
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+}
+
+// ===== 导出按钮 =====
+.exportBtn {
+  padding: $spacing-xs $spacing-md;
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.2), rgba(39, 174, 96, 0.15));
+  border: 1rpx solid rgba(46, 204, 113, 0.4);
+  border-radius: $radius-button;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &:active {
+    transform: scale(0.98);
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.3), rgba(39, 174, 96, 0.25));
+  }
+}
+
+.exportBtnText {
+  font-size: $font-size-xs;
+  color: #58D68D;
+  font-weight: $font-weight-semibold;
+}
+
+// ===== 折叠切换 =====
+.collapseToggleRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1rpx solid $color-border;
+}
+
+.collapseOption {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-sm;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.active {
+    color: $color-primary-light;
+    background: rgba(155, 89, 182, 0.15);
+    font-weight: $font-weight-semibold;
+  }
+}
+
+// ===== 分段复盘补充 =====
+.sectionCompleteBadge {
+  font-size: 20rpx;
+  color: #58D68D;
+  background: rgba(46, 204, 113, 0.15);
+  padding: 4rpx 12rpx;
+  border-radius: $radius-round;
+  margin-left: $spacing-xs;
+  font-weight: $font-weight-medium;
+}
+
+.collapseArrow {
+  font-size: 32rpx;
+  color: $color-text-tertiary;
+  margin-left: $spacing-sm;
+}
+
+.emptySectionHint {
+  padding: $spacing-md;
+  background: rgba(241, 196, 15, 0.06);
+  border-radius: $radius-md;
+  border: 1rpx dashed rgba(241, 196, 15, 0.3);
+}
+
+.emptySectionHintText {
+  font-size: $font-size-xs;
+  color: $color-warning;
+  line-height: 1.6;
+}
+
+.allCompleteHint {
+  padding: $spacing-lg;
+  background: rgba(46, 204, 113, 0.08);
+  border-radius: $radius-lg;
+  border: 1rpx solid rgba(46, 204, 113, 0.2);
+  text-align: center;
+}
+
+.allCompleteText {
+  font-size: $font-size-sm;
+  color: #58D68D;
+  line-height: 1.6;
+}
+
+// ===== 剧情时间线 =====
+.timelineArea {
+  margin-top: $spacing-md;
+}
+
+.timelineIntroCard {
+  padding: $spacing-md $spacing-lg;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: $radius-md;
+  margin-bottom: $spacing-xl;
+  border-left: 4rpx solid $color-primary;
+}
+
+.timelineIntroTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.timelineIntroText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: 1.6;
+}
+
+// 选择点
+.timelineChoicePoints {
+  margin-bottom: $spacing-xl;
+}
+
+.timelineChoiceLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.timelineChoiceCard {
+  display: flex;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-border;
+  margin-bottom: $spacing-sm;
+  align-items: flex-start;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.timelineChoiceIndex {
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+  font-weight: $font-weight-bold;
+  flex-shrink: 0;
+  width: 48rpx;
+  height: 48rpx;
+  background: rgba(155, 89, 182, 0.15);
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timelineChoiceTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.timelineChoiceDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: 1.5;
+}
+
+// 时间线主体
+.timelineMain {
+  position: relative;
+  padding-left: 8rpx;
+}
+
+.timelineNode {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+
+  &:last-child {
+    margin-bottom: 0;
+
+    .timelineNodeLine {
+      display: none;
+    }
+  }
+}
+
+.timelineNodeLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 40rpx;
+  flex-shrink: 0;
+}
+
+.timelineNodeDot {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: $radius-round;
+  border: 3rpx solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.timelineNodeDotTick {
+  font-size: 20rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+}
+
+.timelineNodeLine {
+  width: 4rpx;
+  flex: 1;
+  min-height: 40rpx;
+  margin-top: 4rpx;
+}
+
+.timelineNodeContent {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: $spacing-sm;
+}
+
+.timelineNodeHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.timelineNodeIcon {
+  font-size: 24rpx;
+  flex-shrink: 0;
+}
+
+.timelineNodeTitle {
+  flex: 1;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.timelineNodeProgressBadge {
+  font-size: 20rpx;
+  color: $color-warning;
+  background: rgba(241, 196, 15, 0.15);
+  padding: 4rpx 12rpx;
+  border-radius: $radius-round;
+  font-weight: $font-weight-semibold;
+}
+
+.timelineNodeItems {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.timelineItem {
+  padding: $spacing-md;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-border;
+}
+
+.timelineItemQ {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+  align-items: flex-start;
+}
+
+.timelineItemQLabel {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: $radius-round;
+  background: rgba(52, 152, 219, 0.2);
+  color: #5DADE2;
+  font-size: 20rpx;
+  font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.timelineItemQText {
+  flex: 1;
+  font-size: $font-size-xs;
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+  line-height: 1.6;
+}
+
+.timelineItemA {
+  display: flex;
+  gap: $spacing-sm;
+  align-items: flex-start;
+}
+
+.timelineItemALabel {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: $radius-round;
+  background: rgba(46, 204, 113, 0.2);
+  color: #58D68D;
+  font-size: 20rpx;
+  font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.timelineItemAText {
+  flex: 1;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: 1.7;
+}
+
+.timelineNodeGap {
+  padding: $spacing-md;
+  border: 2rpx dashed $color-border;
+  border-radius: $radius-md;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.timelineNodeGapText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  font-style: italic;
+}
+
+// 结局终点
+.timelineEnding {
+  margin-top: $spacing-xl;
+  position: relative;
+}
+
+.timelineEndingLine {
+  position: absolute;
+  top: 0;
+  left: 26rpx;
+  width: 4rpx;
+  height: $spacing-lg;
+  background: linear-gradient(180deg, $color-primary, $color-primary-light);
+}
+
+.timelineEndingCard {
+  margin-left: 64rpx;
+  padding: $spacing-lg;
+  border-radius: $radius-lg;
+  border: 2rpx solid;
+  position: relative;
+}
+
+.timelineEndingBadge {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  padding: 8rpx 20rpx;
+  border-radius: $radius-round;
+  display: inline-block;
+  margin-bottom: $spacing-sm;
+}
+
+.timelineEndingTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-xs;
+  line-height: 1.3;
+}
+
+.timelineEndingDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.6;
+}
+
+// ===== 带灵感上下文的高亮提示 =====
+.inspirationContextBanner {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.15), rgba(52, 152, 219, 0.1));
+  border-radius: $radius-md;
+  border: 1rpx solid rgba(155, 89, 182, 0.3);
+  margin-bottom: $spacing-lg;
+}
+
+.inspirationContextIcon {
+  font-size: 40rpx;
+  flex-shrink: 0;
+}
+
+.inspirationContextContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.inspirationContextLabel {
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+  font-weight: $font-weight-semibold;
+  display: block;
+  margin-bottom: 2rpx;
+}
+
+.inspirationContextTitle {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+  display: block;
+  @include text-ellipsis;
+}
+
+.inspirationContextClear {
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+
+  &:active {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+.highlightedQuestion {
+  border: 2rpx solid $color-primary-light !important;
+  background: rgba(155, 89, 182, 0.08) !important;
+  box-shadow: 0 0 0 4rpx rgba(155, 89, 182, 0.1);
+}

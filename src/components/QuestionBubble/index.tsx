@@ -9,9 +9,10 @@ interface QuestionBubbleProps {
   data: CausalityQuestion;
   onAnswer: (answer: string) => void;
   index: number;
+  highlighted?: boolean;
 }
 
-const QuestionBubble: React.FC<QuestionBubbleProps> = ({ data, onAnswer, index }) => {
+const QuestionBubble: React.FC<QuestionBubbleProps> = ({ data, onAnswer, index, highlighted }) => {
   const [answerText, setAnswerText] = useState(data.answer || '');
   const [isEditing, setIsEditing] = useState(!data.answered);
 
@@ -33,7 +34,7 @@ const QuestionBubble: React.FC<QuestionBubbleProps> = ({ data, onAnswer, index }
   const colors = categoryColorMap[data.category] || categoryColorMap.mechanism;
 
   return (
-    <View className={classnames(styles.wrapper, data.answered && styles.answered)}>
+    <View className={classnames(styles.wrapper, data.answered && styles.answered, highlighted && styles.highlighted)}>
       <View className={styles.numberBadge}>Q{index + 1}</View>
 
       <View className={styles.questionBubble} style={{ borderColor: colors.bg }}>

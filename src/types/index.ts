@@ -61,6 +61,8 @@ export interface GameState {
   activeDraftId: string | null;
   endings: Ending[];
   selectedEndingId: string | null;
+  selectedInspirationForCausalityId: string | null;
+  pendingInspirationEditId: string | null;
   causalityQuestions: CausalityQuestion[];
   answerArchive: AnswerArchive;
 }

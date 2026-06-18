@@ -64,7 +64,10 @@ const EndingsPage: React.FC = () => {
     getSimilarEndings,
     getCostUnclearEndings,
     getGraphData,
-    selectEnding
+    selectEnding,
+    selectInspirationForCausality,
+    setPendingInspirationEditId,
+    getHighlightedPath
   } = useGameStore();
 
   const [viewMode, setViewMode] = useState<EndingsViewMode>('list');
@@ -76,6 +79,9 @@ const EndingsPage: React.FC = () => {
   const [form, setForm] = useState<EndingFormState>({ ...emptyForm });
   const [showCostEditor, setShowCostEditor] = useState(false);
   const [costEditorValue, setCostEditorValue] = useState('');
+  const [planningTargetEndingId, setPlanningTargetEndingId] = useState<string | null>(null);
+
+  const trueEndings = useMemo(() => endings.filter((e) => e.type === 'true'), [endings]);
 
   const tabCounts = useMemo(() => ({
     all: endings.length,
@@ -86,12 +92,32 @@ const EndingsPage: React.FC = () => {
 
   const graphData = useMemo(() => getGraphData(), [getGraphData]);
 
+  const highlightData = useMemo(() => {
+    if (!planningTargetEndingId) return null;
+    return getHighlightedPath(planningTargetEndingId);
+  }, [planningTargetEndingId, getHighlightedPath]);
+
+  const planningTargetEnding = useMemo(() => {
+    if (!planningTargetEndingId) return null;
+    return endings.find((e) => e.id === planningTargetEndingId) || null;
+  }, [planningTargetEndingId, endings]);
+
   const graphRows = useMemo<GraphRow[]>(() => {
-    const rows: GraphRow[] = graphData.inspirations
+    let rows: GraphRow[] = graphData.inspirations
       .filter((ins) => ins.endingEdges.length > 0)
       .map((ins) => ({ inspiration: ins }));
+
+    // 路线规划模式：只显示相关的灵感 + 全部显示但高亮
+    if (highlightData) {
+      rows = rows.filter((row) => {
+        const insId = row.inspiration.id;
+        // 显示所有高亮的灵感 + 有坏结局岔路的灵感
+        return highlightData.highlightedInspirationIds.includes(insId) ||
+          row.inspiration.endingEdges.some((e) => highlightData.allConnectedEndingIds.includes(e.endingId));
+      });
+    }
     return rows;
-  }, [graphData]);
+  }, [graphData, highlightData]);
 
   const orphanInspirations = useMemo(() => {
     return graphData.inspirations.filter((i) => i.endingEdges.length === 0);
@@ -139,20 +165,94 @@ const EndingsPage: React.FC = () => {
   };
 
   const handleInspirationCardClick = (insId: string) => {
-    Taro.showToast({ title: '请在「灵感速记」页管理该灵感', icon: 'none' });
+    const ins = inspirations.find((i) => i.id === insId);
+    if (!ins) return;
+
+    Taro.showActionSheet({
+      itemList: [
+        '✏️ 编辑此灵感',
+        '🔍 带着去因果检查',
+        `🎯 ${planningTargetEndingId ? '取消路线规划' : '设为路线规划目标'}`
+      ],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          // 编辑此灵感
+          setPendingInspirationEditId(insId);
+          Taro.switchTab({ url: '/pages/inspiration/index' });
+        } else if (res.tapIndex === 1) {
+          // 带着去因果检查
+          if (ins.relatedEndingIds.length === 0) {
+            Taro.showToast({ title: '该灵感还未关联任何结局', icon: 'none' });
+            return;
+          }
+          if (ins.relatedEndingIds.length === 1) {
+            // 只有一个结局，直接跳
+            selectEnding(ins.relatedEndingIds[0]);
+            selectInspirationForCausality(insId);
+            Taro.switchTab({ url: '/pages/causality/index' });
+          } else {
+            // 多个结局，让用户选
+            const endingOptions = ins.relatedEndingIds.map((eid) => {
+              const e = endings.find((x) => x.id === eid);
+              const typeLabel = ENDING_TYPE_LABELS[e?.type || 'bad'];
+              return `【${typeLabel}】${e?.title || '未知结局'}`;
+            });
+            Taro.showActionSheet({
+              itemList: endingOptions,
+              success: (r2) => {
+                const selectedEndingId = ins.relatedEndingIds[r2.tapIndex];
+                selectEnding(selectedEndingId);
+                selectInspirationForCausality(insId);
+                Taro.switchTab({ url: '/pages/causality/index' });
+              }
+            });
+          }
+        } else if (res.tapIndex === 2) {
+          if (planningTargetEndingId) {
+            setPlanningTargetEndingId(null);
+            Taro.showToast({ title: '已退出路线规划模式', icon: 'none' });
+          }
+        }
+      }
+    });
+  };
+
+  const handlePlanningTargetSelect = (endingId: string) => {
+    if (planningTargetEndingId === endingId) {
+      setPlanningTargetEndingId(null);
+    } else {
+      setPlanningTargetEndingId(endingId);
+      Taro.showToast({
+        title: '路线规划：高亮所有通向此结局的节点',
+        icon: 'none',
+        duration: 1800
+      });
+    }
   };
 
   const handleEndingNodeClick = (endingId: string) => {
     const ending = endings.find((e) => e.id === endingId);
     if (ending) {
+      // 如果是路线规划模式，点击结局切换目标
+      if (planningTargetEndingId !== null) {
+        if (ending.type === 'true') {
+          handlePlanningTargetSelect(endingId);
+          return;
+        } else {
+          Taro.showToast({ title: '只能选择真结局作为路线规划目标', icon: 'none' });
+        }
+      }
       setSelectedEnding(ending);
     }
   };
 
-  const handleGotoCausalityFromGraph = (endingId: string) => {
+  const handleGotoCausalityFromGraph = (endingId: string, inspirationId?: string) => {
     Taro.switchTab({ url: '/pages/causality/index' });
     setTimeout(() => {
       useGameStore.getState().selectEnding(endingId);
+      if (inspirationId) {
+        useGameStore.getState().selectInspirationForCausality(inspirationId);
+      }
     }, 300);
   };
 
@@ -317,6 +417,18 @@ const EndingsPage: React.FC = () => {
       true: 'linear-gradient(135deg, #F4D03F, #D4AC0D)'
     };
     return { background: map[tab] };
+  };
+
+  const isInspirationHighlighted = (insId: string) => {
+    return highlightData?.highlightedInspirationIds.includes(insId) ?? false;
+  };
+
+  const isInspirationBadDiversion = (insId: string) => {
+    return highlightData?.badDiversionInspirationIds.includes(insId) ?? false;
+  };
+
+  const isEndingHighlighted = (endingId: string) => {
+    return highlightData?.highlightedEndingIds.includes(endingId) ?? false;
   };
 
   return (
@@ -537,7 +649,7 @@ const EndingsPage: React.FC = () => {
             <View className={styles.graphLegendCard}>
               <Text className={styles.graphLegendTitle}>🗺️ 灵感 → 结局 路径图</Text>
               <Text className={styles.graphLegendHint}>
-                点击结局节点可查看详情；可前往「灵感速记」为灵感绑定通向的结局
+                点击灵感节点：可编辑或带着去因果检查；点击真结局：开启路线规划模式
               </Text>
             </View>
             <View className={styles.graphLegendRow}>
@@ -552,100 +664,228 @@ const EndingsPage: React.FC = () => {
                   </Text>
                 </View>
               ))}
+              <View className={styles.graphLegendItem}>
+                <View
+                  className={styles.graphLegendDot}
+                  style={{ background: 'linear-gradient(135deg, #F39C12, #E67E22)' }}
+                />
+                <Text className={styles.graphLegendLabel}>路线规划目标</Text>
+              </View>
+              <View className={styles.graphLegendItem}>
+                <View
+                  className={styles.graphLegendDot}
+                  style={{ background: '#E74C3C' }}
+                />
+                <Text className={styles.graphLegendLabel}>坏结局岔路</Text>
+              </View>
             </View>
           </View>
+
+          {/* 路线规划控制区 */}
+          {trueEndings.length > 0 && (
+            <View className={styles.planningBar}>
+              <Text className={styles.planningBarLabel}>🎯 路线规划：选择真结局作为目标</Text>
+              <ScrollView scrollX className={styles.planningTargetList} enhanced showScrollbar={false}>
+                {trueEndings.map((te) => (
+                  <View
+                    key={te.id}
+                    className={classnames(
+                      styles.planningTargetChip,
+                      planningTargetEndingId === te.id && 'active'
+                    )}
+                    style={
+                      planningTargetEndingId === te.id
+                        ? { borderColor: '#F1C40F', background: 'rgba(241, 196, 15, 0.15)' }
+                        : {}
+                    }
+                    onClick={() => handlePlanningTargetSelect(te.id)}
+                  >
+                    <Text
+                      className={styles.planningTargetText}
+                      style={planningTargetEndingId === te.id ? { color: '#F1C40F' } : {}}
+                    >
+                      {planningTargetEndingId === te.id ? '🎯 ' : ''}{te.title}
+                    </Text>
+                  </View>
+                ))}
+                {planningTargetEndingId && (
+                  <View
+                    className={styles.planningTargetChip}
+                    onClick={() => setPlanningTargetEndingId(null)}
+                  >
+                    <Text className={styles.planningTargetText}>✕ 退出规划</Text>
+                  </View>
+                )}
+              </ScrollView>
+
+              {planningTargetEnding && highlightData && (
+                <View className={styles.planningSummaryBar}>
+                  <Text className={styles.planningSummaryText}>
+                    <Text style={{ color: '#F1C40F', fontWeight: 'bold' }}>路线分析：</Text>
+                    通向【{planningTargetEnding.title}】共 {highlightData.highlightedInspirationIds.length} 个灵感节点，
+                    其中 {highlightData.badDiversionInspirationIds.length} 个节点会岔向坏结局，设计时请注意。
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {graphRows.length === 0 ? (
             <View className={styles.graphEmptyWrap}>
               <EmptyState
                 icon="🕸️"
-                title="还没有串起因果路径"
-                description="先去「灵感速记」为每个灵感勾选通向的结局，再来这里查看完整的因果路径图"
+                title={highlightData ? '该路线尚无因果路径' : '还没有串起因果路径'}
+                description={
+                  highlightData
+                    ? '这个真结局还没有关联的灵感节点，去灵感速记里为灵感绑定通向它的结局吧'
+                    : '先去「灵感速记」为每个灵感勾选通向的结局，再来这里查看完整的因果路径图'
+                }
               />
             </View>
           ) : (
             <>
-              {graphRows.map((row) => (
-                <View key={row.inspiration.id} className={styles.graphRowCard}>
-                  <View
-                    className={styles.graphInspirationNode}
-                    onClick={() => handleInspirationCardClick(row.inspiration.id)}
-                  >
-                    <Text className={styles.graphInspirationDot}>●</Text>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text className={styles.graphInspirationTitle}>
-                        {row.inspiration.title || '未命名灵感'}
+              {graphRows.map((row) => {
+                const insId = row.inspiration.id;
+                const highlighted = isInspirationHighlighted(insId);
+                const badDiversion = isInspirationBadDiversion(insId);
+                return (
+                  <View key={row.inspiration.id} className={styles.graphRowCard}>
+                    <View
+                      className={classnames(
+                        styles.graphInspirationNode,
+                        highlighted && 'highlighted',
+                        badDiversion && 'badDiversion'
+                      )}
+                      style={
+                        highlighted
+                          ? {
+                              background: 'linear-gradient(135deg, rgba(46, 204, 113, 0.25), rgba(39, 174, 96, 0.08))',
+                              borderColor: '#2ECC71',
+                              boxShadow: '0 0 0 2rpx rgba(46, 204, 113, 0.25)'
+                            }
+                          : badDiversion
+                            ? {
+                                background: 'linear-gradient(135deg, rgba(231, 76, 60, 0.2), rgba(192, 57, 43, 0.06))',
+                                borderColor: '#E74C3C'
+                              }
+                            : {}
+                      }
+                      onClick={() => handleInspirationCardClick(insId)}
+                    >
+                      <Text
+                        className={styles.graphInspirationDot}
+                        style={{
+                          color: badDiversion ? '#E74C3C' : highlighted ? '#2ECC71' : '#9B59B6'
+                        }}
+                      >
+                        ●
                       </Text>
-                      <Text className={styles.graphInspirationDesc} numberOfLines={2}>
-                        {row.inspiration.description}
-                      </Text>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text className={styles.graphInspirationTitle}>
+                          {badDiversion && <Text style={{ color: '#E74C3C', marginRight: 8 }}>⚠️ </Text>}
+                          {row.inspiration.title || '未命名灵感'}
+                        </Text>
+                        <Text className={styles.graphInspirationDesc} numberOfLines={2}>
+                          {row.inspiration.description}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
 
-                  <View className={styles.graphEdges}>
-                    {row.inspiration.endingEdges.map((edge, idx) => {
-                      const ending = endings.find((e) => e.id === edge.endingId);
-                      if (!ending) return null;
-                      return (
-                        <View key={edge.endingId}>
-                          {idx < row.inspiration.endingEdges.length && (
-                            <View className={styles.edgeConnector}>
-                              <View className={styles.edgeLine} />
-                              <Text className={styles.edgeArrow}>↳</Text>
-                            </View>
-                          )}
-                          <View
-                            className={classnames(
-                              styles.graphEndingNode,
-                              `ending-${edge.type}`
+                    <View className={styles.graphEdges}>
+                      {row.inspiration.endingEdges.map((edge, idx) => {
+                        const ending = endings.find((e) => e.id === edge.endingId);
+                        if (!ending) return null;
+                        const targetHighlighted = isEndingHighlighted(edge.endingId);
+                        return (
+                          <View key={edge.endingId}>
+                            {idx < row.inspiration.endingEdges.length && (
+                              <View className={styles.edgeConnector}>
+                                <View
+                                  className={styles.edgeLine}
+                                  style={{
+                                    background: targetHighlighted
+                                      ? 'linear-gradient(180deg, rgba(46, 204, 113, 0.7), rgba(46, 204, 113, 0.15))'
+                                      : undefined
+                                  }}
+                                />
+                                <Text
+                                  className={styles.edgeArrow}
+                                  style={{
+                                    color: targetHighlighted ? '#2ECC71' : undefined
+                                  }}
+                                >
+                                  ↳
+                                </Text>
+                              </View>
                             )}
-                            style={{
-                              borderColor: getEndingTypeColor(edge.type).text,
-                              background: getEndingTypeColor(edge.type).bg
-                            }}
-                            onClick={() => handleEndingNodeClick(edge.endingId)}
-                          >
-                            <View className={styles.graphEndingMain}>
-                              <Text
-                                className={styles.graphEndingBadge}
-                                style={{
-                                  background: getEndingTypeColor(edge.type).bg,
-                                  color: getEndingTypeColor(edge.type).text,
-                                  border: `1rpx solid ${getEndingTypeColor(edge.type).border}`
-                                }}
-                              >
-                                {ENDING_TYPE_LABELS[edge.type]}
-                              </Text>
-                              <Text className={styles.graphEndingTitle}>
-                                {ending.title}
-                              </Text>
-                            </View>
-                            <View className={styles.graphEndingMeta}>
-                              <Text className={styles.graphEndingDifficulty}>
-                                难度{getDifficultyLabel(ending.difficulty)}
-                              </Text>
-                              <View
-                                className={styles.graphEndingCausalityBtn}
-                                onClick={(e) => {
-                                  e.stopPropagation?.();
-                                  handleGotoCausalityFromGraph(edge.endingId);
-                                }}
-                              >
-                                <Text className={styles.graphEndingCausalityText}>🔍 因果检查</Text>
+                            <View
+                              className={classnames(
+                                styles.graphEndingNode,
+                                `ending-${edge.type}`,
+                                targetHighlighted && 'highlighted',
+                                planningTargetEndingId === edge.endingId && 'target'
+                              )}
+                              style={{
+                                borderColor: planningTargetEndingId === edge.endingId
+                                  ? '#F1C40F'
+                                  : getEndingTypeColor(edge.type).text,
+                                background: planningTargetEndingId === edge.endingId
+                                  ? 'rgba(241, 196, 15, 0.18)'
+                                  : targetHighlighted
+                                    ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.18), rgba(39, 174, 96, 0.08))'
+                                    : getEndingTypeColor(edge.type).bg,
+                                boxShadow: planningTargetEndingId === edge.endingId
+                                  ? '0 0 0 3rpx rgba(241, 196, 15, 0.35)'
+                                  : targetHighlighted
+                                    ? '0 0 0 2rpx rgba(46, 204, 113, 0.25)'
+                                    : undefined
+                              }}
+                              onClick={() => handleEndingNodeClick(edge.endingId)}
+                            >
+                              <View className={styles.graphEndingMain}>
+                                <Text
+                                  className={styles.graphEndingBadge}
+                                  style={{
+                                    background: getEndingTypeColor(edge.type).bg,
+                                    color: getEndingTypeColor(edge.type).text,
+                                    border: `1rpx solid ${getEndingTypeColor(edge.type).border}`
+                                  }}
+                                >
+                                  {planningTargetEndingId === edge.endingId
+                                    ? '🎯 '
+                                    : ''}{ENDING_TYPE_LABELS[edge.type]}
+                                </Text>
+                                <Text className={styles.graphEndingTitle}>
+                                  {ending.title}
+                                </Text>
+                              </View>
+                              <View className={styles.graphEndingMeta}>
+                                <Text className={styles.graphEndingDifficulty}>
+                                  难度{getDifficultyLabel(ending.difficulty)}
+                                </Text>
+                                <View
+                                  className={styles.graphEndingCausalityBtn}
+                                  onClick={(e) => {
+                                    e.stopPropagation?.();
+                                    handleGotoCausalityFromGraph(edge.endingId, insId);
+                                  }}
+                                >
+                                  <Text className={styles.graphEndingCausalityText}>🔍 因果检查</Text>
+                                </View>
                               </View>
                             </View>
                           </View>
-                        </View>
-                      );
-                    })}
+                        );
+                      })}
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </>
           )}
 
           {/* 未连通部分 */}
-          {(orphanInspirations.length > 0 || orphanEndings.length > 0) && (
+          {(orphanInspirations.length > 0 || orphanEndings.length > 0) && !highlightData && (
             <View className={styles.orphanSection}>
               <View className={styles.orphanHeader}>
                 <Text className={styles.orphanHeaderTitle}>🔌 还没连起来的节点</Text>
